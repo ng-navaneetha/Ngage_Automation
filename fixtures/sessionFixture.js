@@ -18,14 +18,16 @@ const validPassword =
 let authSetupDone = false;
 
 export async function setupLoginSession(browser) {
-  // Check if auth file exists and is recent (less than 24 hours old)
+  // Check if auth file exists and is recent (less than 12 hours old)
   if (fs.existsSync(AUTH_FILE)) {
     const stats = fs.statSync(AUTH_FILE);
     const ageInHours = (Date.now() - stats.mtime.getTime()) / (1000 * 60 * 60);
     
-    if (ageInHours < 24) {
-      console.log('Using existing auth session...');
+    if (ageInHours < 12) {
+      console.log(`Using existing auth session (${ageInHours.toFixed(1)} hours old)...`);
       return;
+    } else {
+      console.log(`Auth session is ${ageInHours.toFixed(1)} hours old, creating new one...`);
     }
   }
 
@@ -53,10 +55,10 @@ export async function setupLoginSession(browser) {
 
 export async function ensureAuthenticated(page) {
   try {
-    // Check if we're already authenticated by looking for the dashboard indicator
-    const isDashboard = await page.getByText(/How can I assist you today\?/i).isVisible({ timeout: 2000 });
+    // Check if we're already authenticated by looking for the Go Live button
+    const goLiveButton = await page.locator('text=Go Live').isVisible({ timeout: 3000 });
     
-    if (isDashboard) {
+    if (goLiveButton) {
       console.log('Already authenticated, proceeding with tests...');
       return;
     }
@@ -104,7 +106,7 @@ export async function ensureAuthenticated(page) {
     
     // Wait for successful login redirect and authentication indicator
     console.log('Waiting for successful login...');
-    await page.waitForSelector("'text=Go Live'", { 
+    await page.waitForSelector('text=Go Live', { 
       timeout: 30000,
       state: 'visible'
     });
@@ -162,7 +164,7 @@ async function performDirectLogin(page, originalGoto) {
     
     // Wait for successful login redirect and authentication indicator
     console.log('Waiting for successful login...');
-    await page.waitForSelector("'text=Go Live'", { 
+    await page.waitForSelector('text=Go Live', { 
       timeout: 30000,
       state: 'visible'
     });
@@ -186,18 +188,34 @@ export const test = baseTest.extend({
   storageState: async ({ browser }, use, testInfo) => {
     // Only run setup once globally
     if (!authSetupDone) {
-      await setupLoginSession(browser);
-      authSetupDone = true;
+      try {
+        await setupLoginSession(browser);
+        authSetupDone = true;
+      } catch (error) {
+        console.log('Auth setup failed, will retry per test:', error.message);
+        // Don't set authSetupDone to true if it failed
+      }
     }
     
-    // Check if auth file exists
+    // Check if auth file exists and is valid
     if (fs.existsSync(AUTH_FILE)) {
-      await use(AUTH_FILE);
-    } else {
-      // Fallback: create new auth if file doesn't exist
-      await setupLoginSession(browser);
-      await use(AUTH_FILE);
+      try {
+        // Verify the auth file is not corrupted
+        const authData = JSON.parse(fs.readFileSync(AUTH_FILE, 'utf8'));
+        if (authData && authData.cookies && authData.cookies.length > 0) {
+          console.log('Using valid auth file with cookies');
+          await use(AUTH_FILE);
+          return;
+        }
+      } catch (error) {
+        console.log('Auth file is corrupted, creating new one:', error.message);
+      }
     }
+    
+    // Fallback: create new auth if file doesn't exist or is invalid
+    console.log('Creating fallback auth session...');
+    await setupLoginSession(browser);
+    await use(AUTH_FILE);
   },
 
   // Create a fresh context with saved storage state for each test
@@ -225,27 +243,25 @@ export const test = baseTest.extend({
         // Quick check if we need to re-authenticate
         try {
           await page.waitForLoadState('networkidle', { timeout: 5000 });
-          // Check for any valid authenticated heading
-          let isAuthenticated = false;
-          const headingsToCheck = [
-            'Welcome Back,',
-            
-          ];
-          for (const heading of headingsToCheck) {
-            try {
-              if (await page.getByRole('heading', { name: heading }).isVisible({ timeout: 1500 })) {
-                isAuthenticated = true;
-                break;
-              }
-            } catch {}
-          }
+          
+          // Check for Go Live button to verify authentication
+          const isAuthenticated = await page.locator('text=Go Live').isVisible({ timeout: 3000 });
+          
           if (!isAuthenticated) {
-            console.log('Storage state expired, creating new session...');
-            // Create new browser context with fresh login
+            // Check if we're on the login page or need to navigate there
+            const currentUrl = page.url();
+            if (currentUrl.includes('auth0.com') || currentUrl.includes('/login')) {
+              console.log('Already on login page, session expired, performing fresh login...');
+            } else {
+              console.log('Not authenticated and not on login page, creating new session...');
+            }
+            
             await performDirectLogin(page, originalGoto);
             // Navigate to the requested URL with fresh session
             console.log(`Re-navigating to ${url} with fresh auth...`);
             await originalGoto(url, options);
+          } else {
+            console.log('Session is valid, continuing...');
           }
         } catch (error) {
           console.log('Auth check error, continuing with current page state');

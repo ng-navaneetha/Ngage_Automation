@@ -1,0 +1,24 @@
+Generate a comprehensive Playwright test suite using @playwright/test in TypeScript to automate the Poll feature in a Live Class session on https://ngage.ngenux.app/dashboard.
+
+Flow:
+1. Log in as host (email/ pwd)
+2. Start a live session by clicking "Go Live" and allowing mic/camera permissions
+3. Invite user "email"
+4. Open the Poll section from the sidebar
+5. Create a poll with question and multiple options
+6. Share the poll with the invited user
+
+Then:
+- Log in as invitee ( email /password)
+- Access the shared poll and vote
+
+- host will verify the poll answer of invitee
+
+Test Expectations:
+- Automatically cover all relevant positive, negative, and edge test cases
+- Validate the functionality of poll creation, option display, submission, re-submission, and error handling
+- Write each assertion in a separate `test()` block with meaningful names
+- Use only stable selectors like `getByRole` or `getByTestId`
+- Focus on functional testing: verify not just visibility, but behavior and outcome of each action
+- Organize tests using `test.describe()` for clarity
+- Save the test file in the `/tests` directory

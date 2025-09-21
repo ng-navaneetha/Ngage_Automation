@@ -21,8 +21,8 @@ export class GoLivePage {
     );
     this.inviteInput = page.locator('input[placeholder*="invite"]');
     this.stopButton = page.locator('//button[@aria-label="End call"]');
-    this.profileMenu = page.locator('[data-testid="profile-menu"]');
-    this.logoutButton = page.locator("text=Logout");
+    this.profileMenu = page.locator('//span[normalize-space()="Open user menu"]');
+    this.logoutButton = page.locator("text=Log out");
   }
 
   async gotoDashboard(url) {

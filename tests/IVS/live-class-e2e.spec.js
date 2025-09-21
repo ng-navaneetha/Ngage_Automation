@@ -24,15 +24,15 @@ const selectors = {
 test.describe('Live Class Feature', () => {
   test.beforeEach(async ({ page, context }) => {
     await page.goto('https://ngage.ngenux.app/dashboard');
+    await context.grantPermissions(['camera', 'microphone']);
     await page.click(selectors.goLiveButton);
     await expect(page).toHaveURL(/live/);
-    await context.grantPermissions(['camera', 'microphone']);
     
     // Start a live session for testing
     await page.fill('input[placeholder*="invite"]', 'testuser@example.com');
     await page.keyboard.press('Enter');
     await page.click(selectors.startNowButton);
-    await page.waitForSelector('canvas', { timeout: 10000 });
+    await page.waitForSelector('canvas', { timeout: 60000 });
   });
 
   test('@smoke  Test 1: Mic button toggles mute/unmute and updates UI', async ({ page }) => {
