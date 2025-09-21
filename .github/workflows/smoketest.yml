@@ -1,4 +1,4 @@
-name: Ngage Test Report
+name: Ngage Playwright Test Report
 
 on:
   schedule:
