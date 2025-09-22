@@ -1,4 +1,5 @@
 import { test, expect } from '../../fixtures/sessionFixture.js';
+import { waitForLiveSession } from './utils/liveSessionUtils.js';
 
 // Utility selectors (using actual selectors instead of test IDs)
 const selectors = {
@@ -32,7 +33,9 @@ test.describe('Live Class Feature', () => {
     await page.fill('input[placeholder*="invite"]', 'testuser@example.com');
     await page.keyboard.press('Enter');
     await page.click(selectors.startNowButton);
-    await page.waitForSelector('canvas', { timeout: 60000 });
+    
+    // Wait for live session to be ready using utility function
+    await waitForLiveSession(page, "host");
   });
 
   test('@smoke  Test 1: Mic button toggles mute/unmute and updates UI', async ({ page }) => {

@@ -12,7 +12,7 @@ import { defineConfig, devices } from '@playwright/test';
  * See https://playwright.dev/docs/test-configuration.
  */
 export default defineConfig({
-  timeout: 60 * 1000, // Set a global timeout of 30 seconds
+  timeout: 60 * 1000, // Set a global timeout of 60 seconds
   expect: {
     timeout: 10000
   },
@@ -41,14 +41,44 @@ export default defineConfig({
     headless: process.env.CI ? true : false, // Headless in CI, headed locally
     viewport: { width: 1280, height: 1024 },
     screenshot: 'only-on-failure',
-    video: 'retain-on-failure'
+    video: 'retain-on-failure',
+    
+    // Configure fake media devices for CI to avoid permission conflicts
+    ...(process.env.CI && {
+      launchOptions: {
+        args: [
+          '--use-fake-ui-for-media-stream',
+          '--use-fake-device-for-media-stream',
+          '--allow-file-access-from-files',
+          '--disable-web-security',
+          '--use-fake-device-for-media-stream',
+          '--autoplay-policy=no-user-gesture-required'
+        ]
+      },
+      permissions: ['camera', 'microphone']
+    })
   },
 
   /* Configure projects for major browsers */
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: { 
+        ...devices['Desktop Chrome'],
+        // Additional Chrome-specific config for media tests
+        ...(process.env.CI && {
+          launchOptions: {
+            args: [
+              '--use-fake-ui-for-media-stream',
+              '--use-fake-device-for-media-stream',
+              '--allow-file-access-from-files',
+              '--disable-web-security',
+              '--autoplay-policy=no-user-gesture-required',
+              '--disable-features=VizDisplayCompositor'
+            ]
+          }
+        })
+      },
     },
 
     // {
