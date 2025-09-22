@@ -4,7 +4,7 @@ import { goLiveTestData } from "../../constants/goLiveTestData.js";
 import { time } from "console";
 
 
-test.describe.configure({timeout: 240 * 1000});
+test.describe.configure({timeout: 90 * 1000}); // Reduced from 240s to 90s
 test.describe("Go Live E2E Tests", () => {
   let goLivePage;
   test.beforeEach(async ({ page, context }) => {

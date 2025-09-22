@@ -3,7 +3,7 @@ import { INVITEE_CREDENTIALS, HOST_CREDENTIALS, POLL_TEST_DATA } from "../../con
 import { waitForLiveSession } from './utils/liveSessionUtils.js';
 
 
-test.describe.configure({ timeout: 250 * 1000 });
+test.describe.configure({ timeout: 90 * 1000 }); // Reduced from 250s to 90s
 test.describe('Live Poll End-to-End', () => {
   
   test.afterEach(async ({ page }) => {
