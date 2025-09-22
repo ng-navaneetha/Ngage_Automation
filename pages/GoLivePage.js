@@ -96,6 +96,8 @@ export class GoLivePage {
 
   async stopStream() {
     if (await this.stopButton.isVisible()) {
+      await this.page.waitForSelector(this.stopButton, { timeout: 10000 }).toBeEnabled();
+
       await this.page.waitForFunction((btn) => !btn.disabled, this.stopButton);
 
       // Now click safely

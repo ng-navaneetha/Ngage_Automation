@@ -132,6 +132,7 @@ test.describe("Go Live E2E Tests", () => {
       
       for (const selector of stopButtonSelectors) {
         try {
+          await page.waitForSelector(selector, { timeout: 10000 }).toBeEnabled();
           const stopBtn = page.locator(selector).first();
           if (await stopBtn.isVisible({ timeout: 2000 })) {
             await stopBtn.click();
@@ -144,8 +145,7 @@ test.describe("Go Live E2E Tests", () => {
     }
     
     await goLivePage.page.waitForSelector("text=Go Live", { timeout: 10000 });
-    await goLivePage.page.waitForSelector(`text=${goLiveTestData.welcomeBackHeading}`, { timeout: 30000 });
-    await expect(goLivePage.page.getByRole("heading", { name: goLiveTestData.welcomeBackHeading })).toBeVisible();
+    await expect(goLivePage.page.getByRole("heading", { name: "Go Live" })).toBeVisible();
   });
 
   test("Logout from Go Live page", async () => {

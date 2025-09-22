@@ -125,7 +125,7 @@ test.describe('Live Poll End-to-End', () => {
     await expect(inviteePage.locator('text=100%')).toBeVisible();
 
     // Host sees updated results
-    await page.reload();
+    
     await page.click('button:has-text("Poll")');
     await expect(page.locator('text=100%')).toBeVisible();
 
