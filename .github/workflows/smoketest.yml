@@ -36,12 +36,44 @@ jobs:
       - name: Install additional tools
         run: sudo apt-get update && sudo apt-get install -y bc jq
 
+      - name: Debug environment and test connectivity
+        run: |
+          echo "=== Environment Check ==="
+          echo "Node version: $(node --version)"
+          echo "NPM version: $(npm --version)"
+          echo ""
+          echo "=== Test Credentials Check ==="
+          echo "Using credentials from login_Golive.js constants file"
+          echo "Dashboard URL: https://ngage.ngenux.app/dashboard"
+          echo ""
+          echo "=== Test Connectivity ==="
+          curl -I https://ngage.ngenux.app/dashboard || echo "Dashboard not reachable"
+          echo ""
+          echo "=== Playwright Info ==="
+          npx playwright --version
+          echo ""
+          echo "=== Test File Check ==="
+          find tests -name "*.spec.js" | head -5
+          echo ""
+          echo "=== Config Check ==="
+          ls -la playwright.config.*
+
       - name: Run Playwright smoke tests with HTML + JSON report
         id: tests
         continue-on-error: true  # Continue workflow even if tests fail
         run: |
           mkdir -p reports
-          npx playwright test --grep @smoke --workers=1
+          echo "Starting Playwright tests..."
+          echo "Environment: CI=$CI"
+          
+          # No need for environment variables - tests use constants from login_Golive.js
+          echo "Using hardcoded credentials from constants/login_Golive.js"
+          
+          # Run tests with detailed output
+          npx playwright test --grep @smoke --workers=1 --reporter=html,json
+          TEST_EXIT_CODE=$?
+          
+          echo "Test execution completed with exit code: $TEST_EXIT_CODE"
           ts=$(date +'%Y-%m-%d_%H-%M-%S')
           
           # Move reports and handle missing files gracefully
@@ -79,9 +111,13 @@ jobs:
           # Check if results file exists and has actual test data
           if [ ! -f "$RESULTS_FILE" ]; then
             echo "Results file not found, sending failure notification"
-            curl -H 'Content-Type: application/json' \
-              -d "{\"text\": \"🚨 **Ngage Test Results**\n\n❌ Test execution failed - no results available\n🕐 Time: $(date)\n🔗 [View Workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\"}" \
-              ${{ secrets.TEAMS_WEBHOOK_URL }}
+            if [ -n "${{ secrets.TEAMS_WEBHOOK_URL }}" ]; then
+              curl -H 'Content-Type: application/json' \
+                -d "{\"text\": \"🚨 **Ngage Test Results**\n\n❌ Test execution failed - no results available\n🕐 Time: $(date)\n🔗 [View Workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\"}" \
+                ${{ secrets.TEAMS_WEBHOOK_URL }}
+            else
+              echo "Teams webhook URL not configured, skipping notification"
+            fi
             exit 0
           fi
           
@@ -99,9 +135,13 @@ jobs:
             
             if [ "$ACTUAL_TESTS" -eq 0 ]; then
               echo "No actual test results found, sending failure notification"
-              curl -H 'Content-Type: application/json' \
-                -d "{\"text\": \"🚨 **Ngage   Test Results**\n\n❌ Test execution failed - no test results found\n🕐 Time: $(date)\n🔗 [View Workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\"}" \
-                ${{ secrets.TEAMS_WEBHOOK_URL }}
+              if [ -n "${{ secrets.TEAMS_WEBHOOK_URL }}" ]; then
+                curl -H 'Content-Type: application/json' \
+                  -d "{\"text\": \"🚨 **Ngage Test Results**\n\n❌ Test execution failed - no test results found\n🕐 Time: $(date)\n🔗 [View Workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\"}" \
+                  ${{ secrets.TEAMS_WEBHOOK_URL }}
+              else
+                echo "Teams webhook URL not configured, skipping notification"
+              fi
               exit 0
             fi
           fi
@@ -204,8 +244,13 @@ jobs:
           latest_url="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/$REPORT_TS/"
 
           # Send comprehensive Teams message
-          curl -H 'Content-Type: application/json' \
-            -d "{
-              \"text\": \"$EMOJI **Ngage   Test Results**\\n\\n**$STATUS**\\n\\n📊 **Summary:**\\n• Total: $TOTAL_TESTS tests\\n• Passed: $PASSED_TESTS\\n• Failed: $FAILED_TESTS\\n• Flaky: $FLAKY_TESTS\\n• Duration: ${DURATION_SEC}s\\n\\n📋 **Test Details:**\\n$summary$failed_details\\n\\n📑 [View Full Report]($latest_url)\\n🔗 [View Workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\"
-            }" \
-            ${{ secrets.TEAMS_WEBHOOK_URL }}
+          if [ -n "${{ secrets.TEAMS_WEBHOOK_URL }}" ]; then
+            curl -H 'Content-Type: application/json' \
+              -d "{
+                \"text\": \"$EMOJI **Ngage Test Results**\\n\\n**$STATUS**\\n\\n📊 **Summary:**\\n• Total: $TOTAL_TESTS tests\\n• Passed: $PASSED_TESTS\\n• Failed: $FAILED_TESTS\\n• Flaky: $FLAKY_TESTS\\n• Duration: ${DURATION_SEC}s\\n\\n📋 **Test Details:**\\n$summary$failed_details\\n\\n📑 [View Full Report]($latest_url)\\n🔗 [View Workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\"
+              }" \
+              ${{ secrets.TEAMS_WEBHOOK_URL }}
+          else
+            echo "Teams webhook URL not configured, skipping notification"
+            echo "Test results: $STATUS - Total: $TOTAL_TESTS, Passed: $PASSED_TESTS, Failed: $FAILED_TESTS"
+          fi
