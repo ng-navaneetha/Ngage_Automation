@@ -1,5 +1,6 @@
 import { test, expect } from "../../fixtures/sessionFixture.js";
 import { INVITEE_CREDENTIALS, HOST_CREDENTIALS, POLL_TEST_DATA } from "../../constants/pollTestData.js";
+import { waitForLiveSession } from './utils/liveSessionUtils.js';
 
 
 test.describe.configure({ timeout: 250 * 1000 });
@@ -78,7 +79,7 @@ test.describe('Live Poll End-to-End', () => {
     await page.fill('input[placeholder*="invite"]', INVITEE_CREDENTIALS.email);
     await page.keyboard.press('Enter');
     await page.click('button:has-text("Start Now")');
-    await page.waitForSelector('canvas'); // Wait until the canvas element is in the DOM and visible
+    await waitForLiveSession(page, "host-main-test"); // Wait until live session is ready
 
 
     // Get poll URL
@@ -101,7 +102,7 @@ test.describe('Live Poll End-to-End', () => {
     
     // Wait to be redirected back to the poll/live session
     await inviteeContext.grantPermissions(['camera', 'microphone']);
-    await inviteePage.waitForSelector('canvas'); // Wait until the canvas element is in the DOM and visible
+    await waitForLiveSession(inviteePage, "invitee"); // Wait until live session is ready
 
     // Open Poll UI
     await page.click("(//button[@aria-label='Poll'])[1]");
@@ -162,7 +163,7 @@ test.describe('Live Poll End-to-End', () => {
     await page.fill('input[placeholder*="invite"]', INVITEE_CREDENTIALS.email);
     await page.keyboard.press('Enter');
     await page.click('button:has-text("Start Now")');
-    await page.waitForSelector('canvas'); // Wait until the canvas element is in the DOM and visible
+    await waitForLiveSession(page, "host-second-test"); // Wait until live session is ready
 
 
     // Get poll URL
@@ -186,7 +187,7 @@ test.describe('Live Poll End-to-End', () => {
     // Wait to be redirected back to the poll/live session
     await inviteePage.waitForURL(/live/, { timeout: 15000 });
     await inviteeContext.grantPermissions(['camera', 'microphone']);
-    await inviteePage.waitForSelector('canvas'); // Wait until the canvas element is in the DOM and visible
+    await waitForLiveSession(inviteePage, "invitee-second-test"); // Wait until live session is ready
 
     // Open Poll UI
     await page.click("(//button[@aria-label='Poll'])[1]");
