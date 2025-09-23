@@ -23,8 +23,8 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   /* Retry on CI only - reduced retries */
   retries: process.env.CI ? 1 : 0, // Only 1 retry instead of 2
-  /* Allow some parallelism in CI for faster execution */
-  workers: process.env.CI ? 2 : undefined, // Use 2 workers in CI instead of 1
+  /* Opt out of parallel tests on CI for media permissions */
+  workers: process.env.CI ? 1 : undefined, // Use 1 worker in CI for media tests
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [
     ['html'],
@@ -51,8 +51,13 @@ export default defineConfig({
           '--use-fake-device-for-media-stream',
           '--allow-file-access-from-files',
           '--disable-web-security',
-          '--use-fake-device-for-media-stream',
-          '--autoplay-policy=no-user-gesture-required'
+          '--autoplay-policy=no-user-gesture-required',
+          '--disable-background-timer-throttling',
+          '--disable-backgrounding-occluded-windows',
+          '--disable-renderer-backgrounding',
+          '--disable-features=TranslateUI',
+          '--disable-dev-shm-usage',
+          '--no-sandbox'
         ]
       },
       permissions: ['camera', 'microphone']

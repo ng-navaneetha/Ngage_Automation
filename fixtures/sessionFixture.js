@@ -220,10 +220,19 @@ export const test = baseTest.extend({
 
   // Create a fresh context with saved storage state for each test
   context: async ({ browser, storageState }, use) => {
-    const context = await browser.newContext({
+    const contextOptions = {
       storageState: storageState,
-      viewport: { width: 1280, height: 720 }
-    });
+      viewport: { width: 1280, height: 720 },
+      permissions: ['camera', 'microphone']
+    };
+
+    // Add CI-specific options for better media handling
+    if (process.env.CI) {
+      contextOptions.ignoreHTTPSErrors = true;
+      contextOptions.acceptDownloads = false;
+    }
+
+    const context = await browser.newContext(contextOptions);
     await use(context);
     await context.close();
   },
