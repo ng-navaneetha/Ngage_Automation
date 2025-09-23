@@ -28,7 +28,7 @@ export default defineConfig({
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [
     ['html'],
-    ['json', { outputFile: 'results.json' }],
+    ['json', { outputFile: 'test-results/results.json' }],
    
   ],
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
@@ -55,12 +55,18 @@ export default defineConfig({
           '--disable-background-timer-throttling',
           '--disable-backgrounding-occluded-windows',
           '--disable-renderer-backgrounding',
-          '--disable-features=TranslateUI',
+          '--disable-features=TranslateUI,VizDisplayCompositor',
           '--disable-dev-shm-usage',
-          '--no-sandbox'
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-extensions-except',
+          '--disable-plugins',
+          '--disable-gpu',
+          '--force-device-scale-factor=1'
         ]
       },
-      permissions: ['camera', 'microphone']
+      permissions: ['camera', 'microphone'],
+      ignoreHTTPSErrors: true
     })
   },
 
