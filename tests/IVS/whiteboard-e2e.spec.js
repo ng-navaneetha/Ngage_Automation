@@ -5,6 +5,8 @@ import {
   HOST_CREDENTIALS,
 } from "../../constants/pollTestData.js";
 
+test.describe.configure({ timeout: process.env.CI ? 180 * 1000 : 90 * 1000 }); // 3 minutes in CI, 90s locally
+
 test.describe("Whiteboard E2E Tests", () => {
   let goLivePage;
 

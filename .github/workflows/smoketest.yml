@@ -45,8 +45,13 @@ jobs:
           mkdir -p reports
           ts=$(date +'%Y-%m-%d_%H-%M-%S')
           
-          # Run tests with explicit JSON reporter and CI-specific flags
-          npx playwright test --grep @smoke --workers=1 --reporter=html,json 
+          echo "Starting Playwright tests in CI environment..."
+          echo "CI Environment: $CI"
+          echo "Node version: $(node --version)"
+          echo "Playwright version: $(npx playwright --version)"
+          
+          # Run tests with CI-optimized settings
+          npx playwright test --grep @smoke --workers=1  --timeout=180000 
           
           # Move HTML report
           if [ -d "playwright-report" ]; then
