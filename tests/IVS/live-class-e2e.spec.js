@@ -1,5 +1,5 @@
 import { test, expect } from '../../fixtures/sessionFixture.js';
-import { waitForLiveSession } from './utils/liveSessionUtils.js';
+import { waitForLiveSession, setupMediaPermissions, safeStreamEnd } from './utils/enhancedMediaUtils.js';
 
 // Utility selectors (using actual selectors instead of test IDs)
 const selectors = {
@@ -25,7 +25,10 @@ const selectors = {
 test.describe('Live Class Feature', () => {
   test.beforeEach(async ({ page, context }) => {
     await page.goto('https://ngage.ngenux.app/dashboard');
-    await context.grantPermissions(['camera', 'microphone']);
+    
+    // Enhanced media permission setup
+    await setupMediaPermissions(context, page.url());
+    
     await page.click(selectors.goLiveButton);
     await expect(page).toHaveURL(/live/);
     
@@ -34,7 +37,7 @@ test.describe('Live Class Feature', () => {
     await page.keyboard.press('Enter');
     await page.click(selectors.startNowButton);
     
-    // Wait for live session to be ready using utility function
+    // Wait for live session to be ready using enhanced utility
     await waitForLiveSession(page, "host");
   });
 

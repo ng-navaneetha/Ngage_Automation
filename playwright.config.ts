@@ -62,11 +62,21 @@ export default defineConfig({
           '--disable-extensions-except',
           '--disable-plugins',
           '--disable-gpu',
-          '--force-device-scale-factor=1'
+          '--force-device-scale-factor=1',
+          // Enhanced media handling for CI
+          '--disable-background-media-suspend',
+          '--disable-renderer-backgrounding',
+          '--disable-background-networking',
+          '--enable-features=VaapiVideoDecoder',
+          '--ignore-gpu-blacklist',
+          '--enable-gpu-rasterization'
         ]
       },
       permissions: ['camera', 'microphone'],
-      ignoreHTTPSErrors: true
+      ignoreHTTPSErrors: true,
+      // Additional CI-specific context options
+      locale: 'en-US',
+      timezoneId: 'America/New_York'
     })
   },
 

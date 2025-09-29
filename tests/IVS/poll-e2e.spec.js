@@ -1,6 +1,6 @@
 import { test, expect } from "../../fixtures/sessionFixture.js";
 import { INVITEE_CREDENTIALS, HOST_CREDENTIALS, POLL_TEST_DATA } from "../../constants/pollTestData.js";
-import { waitForLiveSession } from './utils/liveSessionUtils.js';
+import { waitForLiveSession, setupMediaPermissions, safeStreamEnd } from './utils/enhancedMediaUtils.js';
 
 
 test.describe.configure({ timeout: process.env.CI ? 180 * 1000 : 90 * 1000 }); // 3 minutes in CI, 90s locally
@@ -58,12 +58,15 @@ test.describe('Live Poll End-to-End', () => {
     } catch (error) {
       console.log("Error during stream ending:", error.message);
       
-      // Final fallback: Navigate to dashboard directly
+      // Final fallback: Navigate to dashboard directly with error handling
       try {
-        await page.goto(HOST_CREDENTIALS.dashboardUrl);
-        console.log("Navigated to dashboard as fallback");
+        if (!page.isClosed()) {
+          await page.goto(HOST_CREDENTIALS.dashboardUrl, { timeout: 10000 });
+          console.log("Navigated to dashboard as fallback");
+        }
       } catch (fallbackError) {
         console.log("Fallback navigation failed:", fallbackError.message);
+        // Don't throw error, let test complete
       }
     }
   });
@@ -72,7 +75,9 @@ test.describe('Live Poll End-to-End', () => {
     // Host flow - using session storage
     await page.goto(HOST_CREDENTIALS.dashboardUrl);
     await page.click('text=Go Live');
-    await context.grantPermissions(['camera', 'microphone']);
+    
+    // Enhanced media permission setup
+    await setupMediaPermissions(context, page.url());
 
     // Allow camera/mic permissions if prompted (manual step or browser context config)
     // Invite participant
@@ -101,7 +106,7 @@ test.describe('Live Poll End-to-End', () => {
     await inviteePage.click('#btn-login');
     
     // Wait to be redirected back to the poll/live session
-    await inviteeContext.grantPermissions(['camera', 'microphone']);
+    await setupMediaPermissions(inviteeContext);
     await waitForLiveSession(inviteePage, "invitee"); // Wait until live session is ready
 
     // Open Poll UI
@@ -186,7 +191,7 @@ test.describe('Live Poll End-to-End', () => {
     
     // Wait to be redirected back to the poll/live session
     await inviteePage.waitForURL(/live/, { timeout: 15000 });
-    await inviteeContext.grantPermissions(['camera', 'microphone']);
+    await setupMediaPermissions(inviteeContext);
     await waitForLiveSession(inviteePage, "invitee-second-test"); // Wait until live session is ready
 
     // Open Poll UI

@@ -4,6 +4,7 @@ import {
   INVITEE_CREDENTIALS,
   HOST_CREDENTIALS,
 } from "../../constants/pollTestData.js";
+import { waitForLiveSession, setupMediaPermissions, safeStreamEnd } from './utils/enhancedMediaUtils.js';
 
 test.describe.configure({ timeout: process.env.CI ? 180 * 1000 : 90 * 1000 }); // 3 minutes in CI, 90s locally
 
@@ -15,7 +16,10 @@ test.describe("Whiteboard E2E Tests", () => {
 
     await page.goto(HOST_CREDENTIALS.dashboardUrl);
     await page.getByRole("link", { name: /go live/i }).click();
-    await context.grantPermissions(["camera", "microphone"]);
+    
+    // Enhanced media permission setup
+    await setupMediaPermissions(context, page.url());
+    
     const inviteInput = page.locator('input[placeholder*="invite"]');
     await inviteInput.fill(INVITEE_CREDENTIALS.email);
     await page.keyboard.press("Enter");

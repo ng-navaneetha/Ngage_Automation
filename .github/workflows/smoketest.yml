@@ -40,20 +40,24 @@ jobs:
 
       - name: Run Playwright smoke tests with HTML + JSON report
         id: tests
-        continue-on-error: true
+        continue-on-error: true  # Continue workflow even if tests fail
         run: |
           mkdir -p reports
-          ts=$(date +'%Y-%m-%d_%H-%M-%S')
           
-          echo "Starting Playwright tests in CI environment..."
+          echo "Starting Playwright tests with media permission fixes..."
           echo "CI Environment: $CI"
           echo "Node version: $(node --version)"
           echo "Playwright version: $(npx playwright --version)"
           
-          # Run tests with CI-optimized settings
-          npx playwright test --grep @smoke --workers=1  --timeout=180000 
+          # Set explicit display for headless mode
+          export DISPLAY=:99.0
           
-          # Move HTML report
+          # Run tests with enhanced media support
+          npx playwright test --grep @smoke --workers=1  --timeout=180000
+          
+          ts=$(date +'%Y-%m-%d_%H-%M-%S')
+          
+          # Move reports and handle missing files gracefully
           if [ -d "playwright-report" ]; then
             mv playwright-report "reports/$ts"
           else
@@ -61,12 +65,11 @@ jobs:
             echo "No HTML report generated" > "reports/$ts/index.html"
           fi
           
-          # Copy JSON results
-          if [ -f "test-results/results.json" ]; then
-            cp "test-results/results.json" "reports/$ts/results.json"
-            echo "✅ Found results.json"
+          if [ -f "results.json" ]; then
+            mv results.json "reports/$ts/results.json"
           else
-            echo "❌ No results.json file found"
+            echo "No results.json file found - tests may have failed during execution"
+            # Create a minimal results file for failed execution
             echo '{"stats":{"expected":0,"unexpected":1,"flaky":0,"skipped":0,"duration":0},"suites":[]}' > "reports/$ts/results.json"
           fi
           
@@ -105,49 +108,42 @@ jobs:
           echo "JSON structure preview:"
           jq 'keys' $RESULTS_FILE 2>/dev/null || echo "Failed to parse JSON keys"
           
-          # Parse test results based on actual JSON structure
-          if [ "$HAS_STATS" = "true" ]; then
-            echo "Using stats-based parsing"
-            # Check if it's a placeholder file (created when tests fail early)
-            TOTAL_FROM_STATS=$(jq -r '.stats.expected + .stats.unexpected + .stats.flaky + .stats.skipped // 0' $RESULTS_FILE 2>/dev/null || echo "0")
-            
-            if [ "$TOTAL_FROM_STATS" -eq 0 ]; then
-              echo "Empty stats detected, this appears to be a placeholder file"
-              curl -H 'Content-Type: application/json' \
-                -d "{\"text\": \"🚨 **Ngage Test Results**\n\n❌ Test execution failed - no test results found\n🕐 Time: $(TZ='Asia/Kolkata' date +'%a %b %d %Y, %I:%M:%S %p IST')\n🔗 [View Workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\n\n---\n👤 **Sent by:** ng-navaneetha\"}" \
-                ${{ secrets.TEAMS_WEBHOOK_URL }}
-              exit 0
-            fi
-            
-            TOTAL_TESTS=$(jq -r '.stats.expected + .stats.unexpected + .stats.flaky + .stats.skipped' $RESULTS_FILE)
-            PASSED_TESTS=$(jq -r '.stats.expected' $RESULTS_FILE)
-            FAILED_TESTS=$(jq -r '.stats.unexpected' $RESULTS_FILE)
-            FLAKY_TESTS=$(jq -r '.stats.flaky' $RESULTS_FILE)
-            DURATION=$(jq -r '.stats.duration' $RESULTS_FILE)
-          elif [ "$HAS_SUITES" = "true" ]; then
-            echo "Using suites-based parsing (new Playwright format)"
-            # Try different levels to count tests - specs are usually the actual test cases
-            TOTAL_TESTS=$(jq '[.suites[]?.specs[]?] | length' $RESULTS_FILE 2>/dev/null || echo "0")
-            PASSED_TESTS=$(jq '[.suites[]?.specs[]? | select(.tests[0].results[0].status == "passed")] | length' $RESULTS_FILE 2>/dev/null || echo "0")
-            FAILED_TESTS=$(jq '[.suites[]?.specs[]? | select(.tests[0].results[0].status == "failed")] | length' $RESULTS_FILE 2>/dev/null || echo "0")
-            FLAKY_TESTS=$(jq '[.suites[]?.specs[]? | select(.tests[0].results[0].status == "flaky")] | length' $RESULTS_FILE 2>/dev/null || echo "0")
-            DURATION=$(jq '[.suites[]?.specs[]?.tests[]?.results[]?.duration // 0] | add // 0' $RESULTS_FILE 2>/dev/null || echo "0")
-          else
-            echo "Unknown JSON format, attempting fallback parsing"
-            # Fallback: try to count any objects with status
-            TOTAL_TESTS=$(jq '[.. | objects | select(.status? != null)] | length' $RESULTS_FILE 2>/dev/null || echo "0")
-            PASSED_TESTS=$(jq '[.. | objects | select(.status? == "passed")] | length' $RESULTS_FILE 2>/dev/null || echo "0")
-            FAILED_TESTS=$(jq '[.. | objects | select(.status? == "failed")] | length' $RESULTS_FILE 2>/dev/null || echo "0")
-            FLAKY_TESTS=$(jq '[.. | objects | select(.status? == "flaky")] | length' $RESULTS_FILE 2>/dev/null || echo "0")
-            DURATION=$(jq '[.. | objects | select(.duration? != null) | .duration] | add // 0' $RESULTS_FILE 2>/dev/null || echo "0")
-            
-            if [ "$TOTAL_TESTS" -eq 0 ]; then
-              echo "No test results found with fallback method"
-              curl -H 'Content-Type: application/json' \
-                -d "{\"text\": \"🚨 **Ngage Test Results**\n\n❌ Test execution failed - unable to parse results\n🕐 Time: $(TZ='Asia/Kolkata' date +'%a %b %d %Y, %I:%M:%S %p IST')\n🔗 [View Workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\n\n---\n👤 **Sent by:** ng-navaneetha\"}" \
-                ${{ secrets.TEAMS_WEBHOOK_URL }}
-              exit 0
-            fi
+          # Parse test results by counting specs (not individual test results/retries) to match HTML report
+          TOTAL_TESTS=$(jq '[.suites[].suites[]?.specs[] // empty] | length' $RESULTS_FILE)
+          
+          # Count specs by their overall status (based on all test results within the spec)
+          PASSED_TESTS=$(jq '
+            [.suites[].suites[]?.specs[] // empty | 
+             select(.ok == true and 
+                    (.tests[].results | map(.status) | all(. == "passed")))] | length
+          ' $RESULTS_FILE)
+          
+          FAILED_TESTS=$(jq '
+            [.suites[].suites[]?.specs[] // empty | 
+             select(.ok == false or 
+                    (.tests[].results | map(.status) | any(. == "failed")))] | length
+          ' $RESULTS_FILE)
+          
+          FLAKY_TESTS=$(jq '
+            [.suites[].suites[]?.specs[] // empty | 
+             select(.ok == true and 
+                    (.tests[].results | map(.status) | any(. == "flaky")))] | length
+          ' $RESULTS_FILE)
+          
+          SKIPPED_TESTS=$(jq '
+            [.suites[].suites[]?.specs[] // empty | 
+             select(.tests[].results | map(.status) | any(. == "skipped"))] | length
+          ' $RESULTS_FILE)
+          
+          DURATION=$(jq -r '.stats.duration // 0' $RESULTS_FILE)
+          
+          # Fallback to stats if spec parsing gives 0 results
+          if [ "$TOTAL_TESTS" -eq 0 ]; then
+            echo "Falling back to stats-based parsing"
+            TOTAL_TESTS=$(jq -r '.stats.expected + .stats.unexpected + .stats.flaky // 0' $RESULTS_FILE)
+            PASSED_TESTS=$(jq -r '.stats.expected // 0' $RESULTS_FILE)
+            FAILED_TESTS=$(jq -r '.stats.unexpected // 0' $RESULTS_FILE)
+            FLAKY_TESTS=$(jq -r '.stats.flaky // 0' $RESULTS_FILE)
           fi
           
           echo "Parsed counts - Total: $TOTAL_TESTS, Passed: $PASSED_TESTS, Failed: $FAILED_TESTS, Flaky: $FLAKY_TESTS, Duration: $DURATION"
@@ -167,35 +163,27 @@ jobs:
             EMOJI="⚠️"
           fi
 
-          # Get test summary with status - try multiple approaches based on actual JSON structure
-          summary=""
-          if [ "$HAS_SUITES" = "true" ]; then
-            echo "Extracting test summary from suites format"
-            # New format: extract from suites
-            summary=$(jq -r '
-              .suites[]?.specs[]? | 
-              select(.title) |
-              "• " + .title + " → " + (.tests[0].results[0].status // "unknown")
-            ' $RESULTS_FILE 2>/dev/null | head -15)
-          fi
+          # Get test summary with status - using correct spec-based approach
+          summary=$(jq -r '
+            .suites[].suites[]?.specs[] // empty | 
+            select(.title) |
+            if .ok == true and (.tests[].results | map(.status) | all(. == "passed")) then
+              "• " + .title + " → ✅ passed"
+            elif .ok == false or (.tests[].results | map(.status) | any(. == "failed")) then
+              "• " + .title + " → ❌ failed"  
+            elif .ok == true and (.tests[].results | map(.status) | any(. == "flaky")) then
+              "• " + .title + " → ⚠️ flaky"
+            else
+              "• " + .title + " → ❓ unknown"
+            end
+          ' $RESULTS_FILE 2>/dev/null | head -15)
           
-          # If first approach fails or we have old format, try alternative methods
+          # Fallback to simple spec listing if complex status parsing fails
           if [ -z "$summary" ]; then
-            echo "Trying alternative summary extraction"
+            echo "Complex status parsing failed, falling back to simple spec listing"
             summary=$(jq -r '
-              .suites[]?.specs[]? | 
+              .suites[].suites[]?.specs[] // empty | 
               select(.title) |
-              "• " + .title
-            ' $RESULTS_FILE 2>/dev/null | head -15)
-          fi
-          
-          # If still empty, try extracting with broader selector
-          if [ -z "$summary" ]; then
-            echo "Trying broader summary extraction"
-            summary=$(jq -r '
-              .. | 
-              objects | 
-              select(.title? and (.title | test("TC|@smoke"; "i"))) |
               "• " + .title
             ' $RESULTS_FILE 2>/dev/null | head -15)
           fi
@@ -212,28 +200,22 @@ jobs:
           # Convert to proper Teams format with line breaks for list items
           summary=$(echo "$summary" | sed ':a;N;$!ba;s/\n/\\n/g')
 
-          # Get failed test details if any - use the format we detected
+          # Get failed test details if any - using spec-based approach
           failed_details=""
           if [ "$FAILED_TESTS" -gt 0 ] || [ "$FLAKY_TESTS" -gt 0 ]; then
-            if [ "$HAS_SUITES" = "true" ]; then
-              # New format: extract from suites
-              failed_details=$(jq -r '
-                .suites[]?.specs[]? | 
-                select(.tests) |
-                select(.tests[0].results[0].status != "passed") |
-                "• " + .title + " (" + (.tests[0].results[0].status // "unknown") + ")"
-              ' $RESULTS_FILE 2>/dev/null | head -5)
-            fi
-            
-            # If first approach fails, try alternative
-            if [ -z "$failed_details" ]; then
-              failed_details=$(jq -r '
-                .. | 
-                objects | 
-                select(.status? and .status != "passed") |
-                "• Test failed (" + (.status // "unknown") + ")"
-              ' $RESULTS_FILE 2>/dev/null | head -5)
-            fi
+            failed_details=$(jq -r '
+              .suites[].suites[]?.specs[] // empty | 
+              select(.title) |
+              select(.ok == false or 
+                     (.tests[].results | map(.status) | any(. == "failed" or . == "flaky"))) |
+              if (.tests[].results | map(.status) | any(. == "failed")) then
+                "• " + .title + " (failed)"
+              elif (.tests[].results | map(.status) | any(. == "flaky")) then
+                "• " + .title + " (flaky)"
+              else
+                "• " + .title + " (unknown issue)"
+              end
+            ' $RESULTS_FILE 2>/dev/null | head -5)
             
             # Convert to single line and add header if we have details
             if [ ! -z "$failed_details" ]; then

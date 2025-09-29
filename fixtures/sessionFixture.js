@@ -230,9 +230,24 @@ export const test = baseTest.extend({
     if (process.env.CI) {
       contextOptions.ignoreHTTPSErrors = true;
       contextOptions.acceptDownloads = false;
+      contextOptions.locale = 'en-US';
+      contextOptions.timezoneId = 'America/New_York';
+      // Enhanced media device simulation for CI
+      contextOptions.mediaFeatures = [
+        { name: 'prefers-reduced-motion', value: 'no-preference' }
+      ];
     }
 
     const context = await browser.newContext(contextOptions);
+    
+    // Ensure media permissions are properly set
+    try {
+      await context.grantPermissions(['camera', 'microphone']);
+      console.log('✅ Media permissions granted at context level');
+    } catch (error) {
+      console.log(`⚠️ Media permission setup failed: ${error.message}`);
+    }
+    
     await use(context);
     await context.close();
   },
