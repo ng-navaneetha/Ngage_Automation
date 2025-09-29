@@ -65,8 +65,8 @@ jobs:
             echo "No HTML report generated" > "reports/$ts/index.html"
           fi
           
-          if [ -f "results.json" ]; then
-            mv results.json "reports/$ts/results.json"
+          if [ -f "test-results/results.json" ]; then
+            mv test-results/results.json "reports/$ts/results.json"
           else
             echo "No results.json file found - tests may have failed during execution"
             # Create a minimal results file for failed execution
@@ -99,6 +99,11 @@ jobs:
           fi
           
           echo "✅ Results file found. Contents structure:"
+          # First 30 lines for debugging
+          echo "First 30 lines of results file:"
+          head -30 "$RESULTS_FILE"
+          echo "--- End debug info ---"
+          
           # Check if this is a new Playwright format (has suites) or old format (has stats)
           HAS_SUITES=$(jq 'has("suites")' $RESULTS_FILE 2>/dev/null || echo "false")
           HAS_STATS=$(jq 'has("stats")' $RESULTS_FILE 2>/dev/null || echo "false")
@@ -108,79 +113,110 @@ jobs:
           echo "JSON structure preview:"
           jq 'keys' $RESULTS_FILE 2>/dev/null || echo "Failed to parse JSON keys"
           
+          # Check if it's a placeholder file (created when tests fail early)
+          TOTAL_FROM_STATS=$(jq -r '.stats.expected + .stats.unexpected + .stats.flaky // 0' $RESULTS_FILE 2>/dev/null || echo "0")
+          
+          if [ "$TOTAL_FROM_STATS" -eq 0 ]; then
+            echo "Empty or invalid results file, checking for actual test results"
+            # Try the robust method to count actual test results
+            ACTUAL_TESTS=$(jq '[.. | objects | select(.status? != null)] | length' $RESULTS_FILE 2>/dev/null || echo "0")
+            
+            if [ "$ACTUAL_TESTS" -eq 0 ]; then
+              echo "No actual test results found, sending failure notification"
+              curl -H 'Content-Type: application/json' \
+                -d "{\"text\": \"🚨 **Ngage Test Results**\n\n❌ Test execution failed - no test results found\n🕐 Time: $(TZ='Asia/Kolkata' date +'%a %b %d %Y, %I:%M:%S %p IST')\n🔗 [View Workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\n\n---\n👤 **Sent by:** ng-navaneetha\"}" \
+                ${{ secrets.TEAMS_WEBHOOK_URL }}
+              exit 0
+            fi
+          fi
+          
           # Parse test results by counting specs (not individual test results/retries) to match HTML report
-          TOTAL_TESTS=$(jq '[.suites[].suites[]?.specs[] // empty] | length' $RESULTS_FILE)
+          TOTAL_TESTS=$(jq '[.suites[].suites[]?.specs[] // empty] | length' $RESULTS_FILE 2>/dev/null || echo "0")
           
           # Count specs by their overall status (based on all test results within the spec)
           PASSED_TESTS=$(jq '
             [.suites[].suites[]?.specs[] // empty | 
-             select(.ok == true and 
-                    (.tests[].results | map(.status) | all(. == "passed")))] | length
-          ' $RESULTS_FILE)
+             select(.ok == true)] | length
+          ' $RESULTS_FILE 2>/dev/null || echo "0")
           
           FAILED_TESTS=$(jq '
             [.suites[].suites[]?.specs[] // empty | 
-             select(.ok == false or 
-                    (.tests[].results | map(.status) | any(. == "failed")))] | length
-          ' $RESULTS_FILE)
+             select(.ok == false)] | length
+          ' $RESULTS_FILE 2>/dev/null || echo "0")
           
           FLAKY_TESTS=$(jq '
             [.suites[].suites[]?.specs[] // empty | 
              select(.ok == true and 
-                    (.tests[].results | map(.status) | any(. == "flaky")))] | length
-          ' $RESULTS_FILE)
+                    (.tests[]?.results[]? | select(.status == "flaky") | length > 0))] | length
+          ' $RESULTS_FILE 2>/dev/null || echo "0")
           
           SKIPPED_TESTS=$(jq '
             [.suites[].suites[]?.specs[] // empty | 
-             select(.tests[].results | map(.status) | any(. == "skipped"))] | length
-          ' $RESULTS_FILE)
+             select(.tests[]?.results[]? | select(.status == "skipped") | length > 0)] | length
+          ' $RESULTS_FILE 2>/dev/null || echo "0")
           
-          DURATION=$(jq -r '.stats.duration // 0' $RESULTS_FILE)
+          DURATION=$(jq -r '.stats.duration // 0' $RESULTS_FILE 2>/dev/null || echo "0")
           
-          # Fallback to stats if spec parsing gives 0 results
-          if [ "$TOTAL_TESTS" -eq 0 ]; then
+          # Fallback to stats if spec parsing gives 0 results or fails
+          if [ "$TOTAL_TESTS" -eq 0 ] || [ "$PASSED_TESTS" -eq 0 -a "$FAILED_TESTS" -eq 0 ]; then
             echo "Falling back to stats-based parsing"
-            TOTAL_TESTS=$(jq -r '.stats.expected + .stats.unexpected + .stats.flaky // 0' $RESULTS_FILE)
-            PASSED_TESTS=$(jq -r '.stats.expected // 0' $RESULTS_FILE)
-            FAILED_TESTS=$(jq -r '.stats.unexpected // 0' $RESULTS_FILE)
-            FLAKY_TESTS=$(jq -r '.stats.flaky // 0' $RESULTS_FILE)
+            TOTAL_TESTS=$(jq -r '(.stats.expected // 0) + (.stats.unexpected // 0) + (.stats.flaky // 0) + (.stats.skipped // 0)' $RESULTS_FILE 2>/dev/null || echo "0")
+            PASSED_TESTS=$(jq -r '.stats.expected // 0' $RESULTS_FILE 2>/dev/null || echo "0")
+            FAILED_TESTS=$(jq -r '.stats.unexpected // 0' $RESULTS_FILE 2>/dev/null || echo "0")
+            FLAKY_TESTS=$(jq -r '.stats.flaky // 0' $RESULTS_FILE 2>/dev/null || echo "0")
+            SKIPPED_TESTS=$(jq -r '.stats.skipped // 0' $RESULTS_FILE 2>/dev/null || echo "0")
           fi
           
-          echo "Parsed counts - Total: $TOTAL_TESTS, Passed: $PASSED_TESTS, Failed: $FAILED_TESTS, Flaky: $FLAKY_TESTS, Duration: $DURATION"
+          echo "Parsed counts - Total: $TOTAL_TESTS, Passed: $PASSED_TESTS, Failed: $FAILED_TESTS, Flaky: $FLAKY_TESTS, Skipped: $SKIPPED_TESTS, Duration: $DURATION"
+          
+          # Debug output to understand parsing
+          echo "Debug: TOTAL_TESTS=$TOTAL_TESTS, PASSED_TESTS=$PASSED_TESTS, FAILED_TESTS=$FAILED_TESTS"
+          
+          # Ensure we have valid numbers (convert empty/null to 0)
+          TOTAL_TESTS=${TOTAL_TESTS:-0}
+          PASSED_TESTS=${PASSED_TESTS:-0}
+          FAILED_TESTS=${FAILED_TESTS:-0}
+          FLAKY_TESTS=${FLAKY_TESTS:-0}
+          SKIPPED_TESTS=${SKIPPED_TESTS:-0}
           
           # Convert duration to seconds
           DURATION_SEC=$(echo "scale=1; $DURATION / 1000" | bc -l 2>/dev/null || echo "0")
 
-          # Determine status and emoji
-          if [ "$FAILED_TESTS" -eq 0 ] && [ "$FLAKY_TESTS" -eq 0 ]; then
+          # Determine status and emoji - be explicit about the logic
+          echo "Status determination: FAILED_TESTS=$FAILED_TESTS, FLAKY_TESTS=$FLAKY_TESTS, PASSED_TESTS=$PASSED_TESTS"
+          
+          if [ "$FAILED_TESTS" -eq 0 ] && [ "$FLAKY_TESTS" -eq 0 ] && [ "$PASSED_TESTS" -gt 0 ]; then
             STATUS="✅ All Tests Passed"
             EMOJI="🎉"
+            echo "Status set to: All Tests Passed"
           elif [ "$FAILED_TESTS" -gt 0 ]; then
             STATUS="❌ Tests Failed"
             EMOJI="🚨"
-          else
+            echo "Status set to: Tests Failed"
+          elif [ "$FLAKY_TESTS" -gt 0 ]; then
             STATUS="⚠️ Flaky Tests Detected"
             EMOJI="⚠️"
+            echo "Status set to: Flaky Tests"
+          else
+            STATUS="❓ Unknown Test Status"
+            EMOJI="❓"
+            echo "Status set to: Unknown (may be parsing issue)"
           fi
 
-          # Get test summary with status - using correct spec-based approach
+          # Get test summary with status - using simplified but reliable approach
           summary=$(jq -r '
             .suites[].suites[]?.specs[] // empty | 
             select(.title) |
-            if .ok == true and (.tests[].results | map(.status) | all(. == "passed")) then
+            if .ok == true then
               "• " + .title + " → ✅ passed"
-            elif .ok == false or (.tests[].results | map(.status) | any(. == "failed")) then
-              "• " + .title + " → ❌ failed"  
-            elif .ok == true and (.tests[].results | map(.status) | any(. == "flaky")) then
-              "• " + .title + " → ⚠️ flaky"
             else
-              "• " + .title + " → ❓ unknown"
+              "• " + .title + " → ❌ failed"  
             end
           ' $RESULTS_FILE 2>/dev/null | head -15)
           
           # Fallback to simple spec listing if complex status parsing fails
           if [ -z "$summary" ]; then
-            echo "Complex status parsing failed, falling back to simple spec listing"
+            echo "Spec-based summary failed, falling back to simple listing"
             summary=$(jq -r '
               .suites[].suites[]?.specs[] // empty | 
               select(.title) |
@@ -188,10 +224,21 @@ jobs:
             ' $RESULTS_FILE 2>/dev/null | head -15)
           fi
           
-          # If we still have no summary, create a basic one
+          # If we still have no summary, use stats-based approach or create fallback
           if [ -z "$summary" ]; then
-            echo "Using fallback summary"
-            summary="• Tests executed - see full report for details"
+            echo "All spec parsing failed, using fallback summary"
+            if [ "$PASSED_TESTS" -gt 0 ]; then
+              summary="• $PASSED_TESTS tests passed ✅"
+            fi
+            if [ "$FAILED_TESTS" -gt 0 ]; then
+              summary="$summary\\n• $FAILED_TESTS tests failed ❌"
+            fi
+            if [ "$FLAKY_TESTS" -gt 0 ]; then
+              summary="$summary\\n• $FLAKY_TESTS tests flaky ⚠️"
+            fi
+            if [ -z "$summary" ]; then
+              summary="• Tests executed - see full report for details"
+            fi
           fi
           
           echo "Final summary before Teams formatting:"
