@@ -1,0 +1,909 @@
+{
+  "config": {
+    "configFile": "/home/runner/work/Ngage_Automation/Ngage_Automation/playwright.config.ts",
+    "rootDir": "/home/runner/work/Ngage_Automation/Ngage_Automation/tests",
+    "forbidOnly": true,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "ci": {
+        "commitHref": "https://github.com/ng-navaneetha/Ngage_Automation/commit/30be1fdfcdbda9e184f06fe6d1be9df309cfcb9c",
+        "commitHash": "30be1fdfcdbda9e184f06fe6d1be9df309cfcb9c",
+        "buildHref": "https://github.com/ng-navaneetha/Ngage_Automation/actions/runs/18333125164"
+      },
+      "gitCommit": {
+        "shortHash": "30be1fd",
+        "hash": "30be1fdfcdbda9e184f06fe6d1be9df309cfcb9c",
+        "subject": "🔧 Fix Playwright results file handling and enhance test result parsing for improved reliability",
+        "body": "🔧 Fix Playwright results file handling and enhance test result parsing for improved reliability\n",
+        "author": {
+          "name": "ng-navaneetha",
+          "email": "navaneetha.b@ngenux.com",
+          "time": 1759151883000
+        },
+        "committer": {
+          "name": "ng-navaneetha",
+          "email": "navaneetha.b@ngenux.com",
+          "time": 1759151883000
+        },
+        "branch": "main"
+      },
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "html",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "test-results/results.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "/home/runner/work/Ngage_Automation/Ngage_Automation/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "ci": {
+            "commitHref": "https://github.com/ng-navaneetha/Ngage_Automation/commit/30be1fdfcdbda9e184f06fe6d1be9df309cfcb9c",
+            "commitHash": "30be1fdfcdbda9e184f06fe6d1be9df309cfcb9c",
+            "buildHref": "https://github.com/ng-navaneetha/Ngage_Automation/actions/runs/18333125164"
+          },
+          "gitCommit": {
+            "shortHash": "30be1fd",
+            "hash": "30be1fdfcdbda9e184f06fe6d1be9df309cfcb9c",
+            "subject": "🔧 Fix Playwright results file handling and enhance test result parsing for improved reliability",
+            "body": "🔧 Fix Playwright results file handling and enhance test result parsing for improved reliability\n",
+            "author": {
+              "name": "ng-navaneetha",
+              "email": "navaneetha.b@ngenux.com",
+              "time": 1759151883000
+            },
+            "committer": {
+              "name": "ng-navaneetha",
+              "email": "navaneetha.b@ngenux.com",
+              "time": 1759151883000
+            },
+            "branch": "main"
+          },
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/home/runner/work/Ngage_Automation/Ngage_Automation/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 180000
+      }
+    ],
+    "shard": null,
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.53.1",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "IVS/go-live-e2e.spec.js",
+      "file": "IVS/go-live-e2e.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Go Live E2E Tests",
+          "file": "IVS/go-live-e2e.spec.js",
+          "line": 8,
+          "column": 6,
+          "specs": [
+            {
+              "title": "@smoke Stream Title & Description fields are visible",
+              "ok": true,
+              "tags": [
+                "smoke"
+              ],
+              "tests": [
+                {
+                  "timeout": 180000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 10073,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "Using existing auth session (0.0 hours old)...\n"
+                        },
+                        {
+                          "text": "Using valid auth file with cookies\n"
+                        },
+                        {
+                          "text": "✅ Media permissions granted at context level\n"
+                        },
+                        {
+                          "text": "Navigating to app URL: https://ngage.ngenux.app/dashboard\n"
+                        },
+                        {
+                          "text": "Already on login page, session expired, performing fresh login...\n"
+                        },
+                        {
+                          "text": "Starting direct login process...\n"
+                        },
+                        {
+                          "text": "Navigated to login URL directly\n"
+                        },
+                        {
+                          "text": "Go to Login button visible: \u001b[33mfalse\u001b[39m\n"
+                        },
+                        {
+                          "text": "Login button visible: \u001b[33mfalse\u001b[39m\n"
+                        },
+                        {
+                          "text": "Waiting for Auth0 login page...\n"
+                        },
+                        {
+                          "text": "Auth0 login page loaded\n"
+                        },
+                        {
+                          "text": "Filling login credentials...\n"
+                        },
+                        {
+                          "text": "Submitted login form\n"
+                        },
+                        {
+                          "text": "Waiting for successful login...\n"
+                        },
+                        {
+                          "text": "Direct login completed successfully\n"
+                        },
+                        {
+                          "text": "Saving storage state...\n"
+                        },
+                        {
+                          "text": "Storage state saved successfully\n"
+                        },
+                        {
+                          "text": "Re-navigating to https://ngage.ngenux.app/dashboard with fresh auth...\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-10-08T03:47:15.009Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "42b6be6edcbf982845e2-9e3d708a6aca634abbea",
+              "file": "IVS/go-live-e2e.spec.js",
+              "line": 31,
+              "column": 7
+            },
+            {
+              "title": "@smoke Stop/End live and edge case: stop again",
+              "ok": true,
+              "tags": [
+                "smoke"
+              ],
+              "tests": [
+                {
+                  "timeout": 180000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3177,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "Using valid auth file with cookies\n"
+                        },
+                        {
+                          "text": "✅ Media permissions granted at context level\n"
+                        },
+                        {
+                          "text": "Navigating to app URL: https://ngage.ngenux.app/dashboard\n"
+                        },
+                        {
+                          "text": "Auth check error, continuing with current page state\n"
+                        },
+                        {
+                          "text": "Using valid auth file with cookies\n"
+                        },
+                        {
+                          "text": "✅ Media permissions granted at context level\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-10-08T03:47:25.169Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "42b6be6edcbf982845e2-5413fdc6e2b2459a020f",
+              "file": "IVS/go-live-e2e.spec.js",
+              "line": 115,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "IVS/live-class-e2e.spec.js",
+      "file": "IVS/live-class-e2e.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Live Class Feature",
+          "file": "IVS/live-class-e2e.spec.js",
+          "line": 25,
+          "column": 6,
+          "specs": [
+            {
+              "title": "@smoke  Test 1: Mic button toggles mute/unmute and updates UI",
+              "ok": true,
+              "tags": [
+                "smoke"
+              ],
+              "tests": [
+                {
+                  "timeout": 180000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 5924,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "Using valid auth file with cookies\n"
+                        },
+                        {
+                          "text": "✅ Media permissions granted at context level\n"
+                        },
+                        {
+                          "text": "Navigating to app URL: https://ngage.ngenux.app/dashboard\n"
+                        },
+                        {
+                          "text": "Auth check error, continuing with current page state\n"
+                        },
+                        {
+                          "text": "🎥 Setting up media permissions for CI environment\n"
+                        },
+                        {
+                          "text": "✅ Media permissions granted successfully\n"
+                        },
+                        {
+                          "text": "🔄 Waiting for host live session to initialize... (CI: true)\n"
+                        },
+                        {
+                          "text": "✅ host: Canvas detected - video stream active\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-10-08T03:47:28.440Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "08b76cc0d1c4489d7fc5-653647c85ad5378f458c",
+              "file": "IVS/live-class-e2e.spec.js",
+              "line": 44,
+              "column": 7
+            },
+            {
+              "title": "@smoke Test 2: Camera button toggles video and updates UI",
+              "ok": true,
+              "tags": [
+                "smoke"
+              ],
+              "tests": [
+                {
+                  "timeout": 180000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 5158,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "Using valid auth file with cookies\n"
+                        },
+                        {
+                          "text": "✅ Media permissions granted at context level\n"
+                        },
+                        {
+                          "text": "Navigating to app URL: https://ngage.ngenux.app/dashboard\n"
+                        },
+                        {
+                          "text": "Auth check error, continuing with current page state\n"
+                        },
+                        {
+                          "text": "🎥 Setting up media permissions for CI environment\n"
+                        },
+                        {
+                          "text": "✅ Media permissions granted successfully\n"
+                        },
+                        {
+                          "text": "🔄 Waiting for host live session to initialize... (CI: true)\n"
+                        },
+                        {
+                          "text": "✅ host: Canvas detected - video stream active\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-10-08T03:47:34.370Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "08b76cc0d1c4489d7fc5-3712ea96b9eb2e93fbe7",
+              "file": "IVS/live-class-e2e.spec.js",
+              "line": 55,
+              "column": 7
+            },
+            {
+              "title": " @smoke Test 3: Chat panel sends and persists messages",
+              "ok": true,
+              "tags": [
+                "smoke"
+              ],
+              "tests": [
+                {
+                  "timeout": 180000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 5292,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "Using valid auth file with cookies\n"
+                        },
+                        {
+                          "text": "✅ Media permissions granted at context level\n"
+                        },
+                        {
+                          "text": "Navigating to app URL: https://ngage.ngenux.app/dashboard\n"
+                        },
+                        {
+                          "text": "Auth check error, continuing with current page state\n"
+                        },
+                        {
+                          "text": "🎥 Setting up media permissions for CI environment\n"
+                        },
+                        {
+                          "text": "✅ Media permissions granted successfully\n"
+                        },
+                        {
+                          "text": "🔄 Waiting for host live session to initialize... (CI: true)\n"
+                        },
+                        {
+                          "text": "✅ host: Canvas detected - video stream active\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-10-08T03:47:39.533Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "08b76cc0d1c4489d7fc5-e3d34274c78c6e706300",
+              "file": "IVS/live-class-e2e.spec.js",
+              "line": 68,
+              "column": 7
+            },
+            {
+              "title": " @smoke Test 4: Participants panel shows correct participant count",
+              "ok": true,
+              "tags": [
+                "smoke"
+              ],
+              "tests": [
+                {
+                  "timeout": 180000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 5368,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "Using valid auth file with cookies\n"
+                        },
+                        {
+                          "text": "✅ Media permissions granted at context level\n"
+                        },
+                        {
+                          "text": "Navigating to app URL: https://ngage.ngenux.app/dashboard\n"
+                        },
+                        {
+                          "text": "Auth check error, continuing with current page state\n"
+                        },
+                        {
+                          "text": "🎥 Setting up media permissions for CI environment\n"
+                        },
+                        {
+                          "text": "✅ Media permissions granted successfully\n"
+                        },
+                        {
+                          "text": "🔄 Waiting for host live session to initialize... (CI: true)\n"
+                        },
+                        {
+                          "text": "✅ host: Canvas detected - video stream active\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-10-08T03:47:44.830Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "08b76cc0d1c4489d7fc5-1beae254e61b63b4db65",
+              "file": "IVS/live-class-e2e.spec.js",
+              "line": 84,
+              "column": 7
+            },
+            {
+              "title": "@smoke Test 5: Screen share button activates screen sharing UI",
+              "ok": true,
+              "tags": [
+                "smoke"
+              ],
+              "tests": [
+                {
+                  "timeout": 180000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 5187,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "Using valid auth file with cookies\n"
+                        },
+                        {
+                          "text": "✅ Media permissions granted at context level\n"
+                        },
+                        {
+                          "text": "Navigating to app URL: https://ngage.ngenux.app/dashboard\n"
+                        },
+                        {
+                          "text": "Auth check error, continuing with current page state\n"
+                        },
+                        {
+                          "text": "🎥 Setting up media permissions for CI environment\n"
+                        },
+                        {
+                          "text": "✅ Media permissions granted successfully\n"
+                        },
+                        {
+                          "text": "🔄 Waiting for host live session to initialize... (CI: true)\n"
+                        },
+                        {
+                          "text": "✅ host: Canvas detected - video stream active\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-10-08T03:47:50.203Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "08b76cc0d1c4489d7fc5-f88f0d3163945e30776d",
+              "file": "IVS/live-class-e2e.spec.js",
+              "line": 96,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "IVS/poll-e2e.spec.js",
+      "file": "IVS/poll-e2e.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Live Poll End-to-End",
+          "file": "IVS/poll-e2e.spec.js",
+          "line": 7,
+          "column": 6,
+          "specs": [
+            {
+              "title": "@smoke Host creates poll, invitee votes, and results update",
+              "ok": true,
+              "tags": [
+                "smoke"
+              ],
+              "tests": [
+                {
+                  "timeout": 180000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 18524,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "Using valid auth file with cookies\n"
+                        },
+                        {
+                          "text": "✅ Media permissions granted at context level\n"
+                        },
+                        {
+                          "text": "Navigating to app URL: https://ngage.ngenux.app/dashboard\n"
+                        },
+                        {
+                          "text": "Auth check error, continuing with current page state\n"
+                        },
+                        {
+                          "text": "🎥 Setting up media permissions for CI environment\n"
+                        },
+                        {
+                          "text": "✅ Media permissions granted successfully\n"
+                        },
+                        {
+                          "text": "🔄 Waiting for host-main-test live session to initialize... (CI: true)\n"
+                        },
+                        {
+                          "text": "✅ host-main-test: Canvas detected - video stream active\n"
+                        },
+                        {
+                          "text": "🎥 Setting up media permissions for CI environment\n"
+                        },
+                        {
+                          "text": "✅ Media permissions granted successfully\n"
+                        },
+                        {
+                          "text": "🔄 Waiting for invitee live session to initialize... (CI: true)\n"
+                        },
+                        {
+                          "text": "✅ invitee: Canvas detected - video stream active\n"
+                        },
+                        {
+                          "text": "Ending stream after poll test...\n"
+                        },
+                        {
+                          "text": "Stream ended using selector: //button[@aria-label=\"End call\"]\n"
+                        },
+                        {
+                          "text": "Stream ended successfully - redirected to dashboard\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-10-08T03:47:55.398Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "84a0421ddbd1b86905df-f31e6755a2067de8e2b6",
+              "file": "IVS/poll-e2e.spec.js",
+              "line": 74,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "IVS/whiteboard-e2e.spec.js",
+      "file": "IVS/whiteboard-e2e.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Whiteboard E2E Tests",
+          "file": "IVS/whiteboard-e2e.spec.js",
+          "line": 11,
+          "column": 6,
+          "specs": [],
+          "suites": [
+            {
+              "title": "Basic Functionality Tests",
+              "file": "IVS/whiteboard-e2e.spec.js",
+              "line": 48,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "@smoke Test 1: All whiteboard controls are visible and clickable",
+                  "ok": true,
+                  "tags": [
+                    "smoke"
+                  ],
+                  "tests": [
+                    {
+                      "timeout": 180000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 9502,
+                          "errors": [],
+                          "stdout": [
+                            {
+                              "text": "Using valid auth file with cookies\n"
+                            },
+                            {
+                              "text": "✅ Media permissions granted at context level\n"
+                            },
+                            {
+                              "text": "Navigating to app URL: https://ngage.ngenux.app/dashboard\n"
+                            },
+                            {
+                              "text": "Auth check error, continuing with current page state\n"
+                            },
+                            {
+                              "text": "🎥 Setting up media permissions for CI environment\n"
+                            },
+                            {
+                              "text": "✅ Media permissions granted successfully\n"
+                            },
+                            {
+                              "text": "Testing Pencil tool...\n"
+                            },
+                            {
+                              "text": "✓ Pencil tool is visible, enabled, and clickable\n"
+                            },
+                            {
+                              "text": "Testing Line tool...\n"
+                            },
+                            {
+                              "text": "✓ Line tool is visible, enabled, and clickable\n"
+                            },
+                            {
+                              "text": "Testing Rectangle tool...\n"
+                            },
+                            {
+                              "text": "✓ Rectangle tool is visible, enabled, and clickable\n"
+                            },
+                            {
+                              "text": "Testing Ellipse tool...\n"
+                            },
+                            {
+                              "text": "✓ Ellipse tool is visible, enabled, and clickable\n"
+                            },
+                            {
+                              "text": "Testing Arrow tool...\n"
+                            },
+                            {
+                              "text": "✓ Arrow tool is visible, enabled, and clickable\n"
+                            },
+                            {
+                              "text": "Testing Eraser tool...\n"
+                            },
+                            {
+                              "text": "✓ Eraser tool is visible, enabled, and clickable\n"
+                            },
+                            {
+                              "text": "Testing Undo tool...\n"
+                            },
+                            {
+                              "text": "✓ Undo tool is visible, enabled, and clickable\n"
+                            },
+                            {
+                              "text": "Testing Redo tool...\n"
+                            },
+                            {
+                              "text": "✓ Redo tool is visible, enabled, and clickable\n"
+                            },
+                            {
+                              "text": "Testing Clear tool...\n"
+                            },
+                            {
+                              "text": "✓ Clear tool is visible, enabled, and clickable\n"
+                            },
+                            {
+                              "text": "✓ All whiteboard tools are functional without errors\n"
+                            },
+                            {
+                              "text": "Ending stream after whiteboard test...\n"
+                            },
+                            {
+                              "text": "Stream ended successfully\n"
+                            }
+                          ],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-10-08T03:48:13.935Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "9c16e10561c911ea9448-176f217abf0adb7b3123",
+                  "file": "IVS/whiteboard-e2e.spec.js",
+                  "line": 49,
+                  "column": 9
+                },
+                {
+                  "title": "@smoke Test 2: Draws on canvas and verifies drawing appears",
+                  "ok": true,
+                  "tags": [
+                    "smoke"
+                  ],
+                  "tests": [
+                    {
+                      "timeout": 180000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 7980,
+                          "errors": [],
+                          "stdout": [
+                            {
+                              "text": "Using valid auth file with cookies\n"
+                            },
+                            {
+                              "text": "✅ Media permissions granted at context level\n"
+                            },
+                            {
+                              "text": "Navigating to app URL: https://ngage.ngenux.app/dashboard\n"
+                            },
+                            {
+                              "text": "Auth check error, continuing with current page state\n"
+                            },
+                            {
+                              "text": "🎥 Setting up media permissions for CI environment\n"
+                            },
+                            {
+                              "text": "✅ Media permissions granted successfully\n"
+                            },
+                            {
+                              "text": "Drawing diagonal line from center: (415, 360) to (515, 460)\n"
+                            },
+                            {
+                              "text": "Canvas content check: {\n  hasContent: \u001b[33mtrue\u001b[39m,\n  details: \u001b[32m'Found 10000 content pixels in center area (100x100)'\u001b[39m,\n  canvasSize: { width: \u001b[33m898\u001b[39m, height: \u001b[33m720\u001b[39m }\n}\n"
+                            },
+                            {
+                              "text": "Ending stream after whiteboard test...\n"
+                            },
+                            {
+                              "text": "Stream ended successfully\n"
+                            }
+                          ],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-10-08T03:48:23.442Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "9c16e10561c911ea9448-8ac4071f0d1cbd75ba6c",
+                  "file": "IVS/whiteboard-e2e.spec.js",
+                  "line": 108,
+                  "column": 9
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2025-10-08T03:47:14.112Z",
+    "duration": 77368.243,
+    "expected": 10,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}
