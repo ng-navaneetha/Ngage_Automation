@@ -52,10 +52,19 @@ jobs:
           # Set explicit display for headless mode
           export DISPLAY=:99.0
           
-          # Run tests with enhanced media support
-          npx playwright test --grep @smoke --workers=1  --timeout=180000
+          # Run tests with enhanced media support and JSON reporter
+          npx playwright test --grep @smoke --workers=1 --timeout=180000 
           
           ts=$(date +'%Y-%m-%d_%H-%M-%S')
+          
+          # Debug: Show what files were generated
+          echo "🔍 Checking for generated files..."
+          echo "Current directory contents:"
+          ls -la
+          echo "Test-results directory:"
+          ls -la test-results/ 2>/dev/null || echo "No test-results directory found"
+          echo "Playwright-report directory:"
+          ls -la playwright-report/ 2>/dev/null || echo "No playwright-report directory found"
           
           # Move reports and handle missing files gracefully
           if [ -d "playwright-report" ]; then
@@ -65,10 +74,18 @@ jobs:
             echo "No HTML report generated" > "reports/$ts/index.html"
           fi
           
+          # Try multiple possible locations for results.json
           if [ -f "test-results/results.json" ]; then
+            echo "✅ Found results.json in test-results/"
             mv test-results/results.json "reports/$ts/results.json"
+          elif [ -f "results.json" ]; then
+            echo "✅ Found results.json in root directory"
+            mv results.json "reports/$ts/results.json"
           else
-            echo "No results.json file found - tests may have failed during execution"
+            echo "❌ No results.json file found in expected locations"
+            echo "Available files in current directory:"
+            find . -name "*.json" -type f 2>/dev/null || echo "No JSON files found"
+            
             # Create a minimal results file for failed execution
             echo '{"stats":{"expected":0,"unexpected":1,"flaky":0,"skipped":0,"duration":0},"suites":[]}' > "reports/$ts/results.json"
           fi
