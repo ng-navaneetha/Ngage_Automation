@@ -130,29 +130,32 @@ jobs:
             fi
           fi
           
-          # Parse test results by counting specs (not individual test results/retries) to match HTML report
-          TOTAL_TESTS=$(jq '[.suites[].suites[]?.specs[] // empty] | length' $RESULTS_FILE 2>/dev/null || echo "0")
+          # Parse test results with correct nested structure: suites[].suites[].specs[]
+          TOTAL_TESTS=$(jq '
+            [.suites[]?.suites[]?.specs[] // empty] | length
+          ' $RESULTS_FILE 2>/dev/null || echo "0")
           
-          # Count specs by their overall status (based on all test results within the spec)
+          # Count specs by their overall status (using spec.ok which is most reliable)
           PASSED_TESTS=$(jq '
-            [.suites[].suites[]?.specs[] // empty | 
+            [.suites[]?.suites[]?.specs[] // empty | 
              select(.ok == true)] | length
           ' $RESULTS_FILE 2>/dev/null || echo "0")
           
           FAILED_TESTS=$(jq '
-            [.suites[].suites[]?.specs[] // empty | 
+            [.suites[]?.suites[]?.specs[] // empty | 
              select(.ok == false)] | length
           ' $RESULTS_FILE 2>/dev/null || echo "0")
           
+          # For flaky tests, check the actual test results status
           FLAKY_TESTS=$(jq '
-            [.suites[].suites[]?.specs[] // empty | 
-             select(.ok == true and 
-                    (.tests[]?.results[]? | select(.status == "flaky") | length > 0))] | length
+            [.suites[]?.suites[]?.specs[] // empty | 
+             select(.tests[]?.results[]?.status == "flaky")] | length
           ' $RESULTS_FILE 2>/dev/null || echo "0")
           
+          # For skipped tests, check the actual test results status  
           SKIPPED_TESTS=$(jq '
-            [.suites[].suites[]?.specs[] // empty | 
-             select(.tests[]?.results[]? | select(.status == "skipped") | length > 0)] | length
+            [.suites[]?.suites[]?.specs[] // empty | 
+             select(.tests[]?.results[]?.status == "skipped")] | length
           ' $RESULTS_FILE 2>/dev/null || echo "0")
           
           DURATION=$(jq -r '.stats.duration // 0' $RESULTS_FILE 2>/dev/null || echo "0")
@@ -203,9 +206,9 @@ jobs:
             echo "Status set to: Unknown (may be parsing issue)"
           fi
 
-          # Get test summary with status - using simplified but reliable approach
+          # Get test summary with status - using correct nested structure
           summary=$(jq -r '
-            .suites[].suites[]?.specs[] // empty | 
+            .suites[]?.suites[]?.specs[] // empty | 
             select(.title) |
             if .ok == true then
               "• " + .title + " → ✅ passed"
@@ -218,7 +221,7 @@ jobs:
           if [ -z "$summary" ]; then
             echo "Spec-based summary failed, falling back to simple listing"
             summary=$(jq -r '
-              .suites[].suites[]?.specs[] // empty | 
+              .suites[]?.suites[]?.specs[] // empty | 
               select(.title) |
               "• " + .title
             ' $RESULTS_FILE 2>/dev/null | head -15)
@@ -247,27 +250,40 @@ jobs:
           # Convert to proper Teams format with line breaks for list items
           summary=$(echo "$summary" | sed ':a;N;$!ba;s/\n/\\n/g')
 
-          # Get failed test details if any - using spec-based approach
+          # Get failed test details with actual error messages
           failed_details=""
-          if [ "$FAILED_TESTS" -gt 0 ] || [ "$FLAKY_TESTS" -gt 0 ]; then
+          if [ "$FAILED_TESTS" -gt 0 ]; then
             failed_details=$(jq -r '
-              .suites[].suites[]?.specs[] // empty | 
-              select(.title) |
-              select(.ok == false or 
-                     (.tests[].results | map(.status) | any(. == "failed" or . == "flaky"))) |
-              if (.tests[].results | map(.status) | any(. == "failed")) then
-                "• " + .title + " (failed)"
-              elif (.tests[].results | map(.status) | any(. == "flaky")) then
-                "• " + .title + " (flaky)"
+              .suites[]?.suites[]?.specs[] // empty | 
+              select(.ok == false) |
+              "• " + .title + 
+              if .tests[0]?.results[0]?.error?.message then
+                " (" + (.tests[0].results[0].error.message | split("\n")[0]) + ")"
               else
-                "• " + .title + " (unknown issue)"
+                " (Test failed)"
               end
             ' $RESULTS_FILE 2>/dev/null | head -5)
             
             # Convert to single line and add header if we have details
             if [ ! -z "$failed_details" ]; then
               failed_details=$(echo "$failed_details" | sed ':a;N;$!ba;s/\n/\\n/g')
-              failed_details="\\n\\n**❌ Failed/Flaky Tests:**\\n$failed_details"
+              failed_details="\\n\\n**❌ Failed Tests:**\\n$failed_details"
+            fi
+          fi
+          
+          # Get flaky test details  
+          flaky_details=""
+          if [ "$FLAKY_TESTS" -gt 0 ]; then
+            flaky_details=$(jq -r '
+              .suites[]?.suites[]?.specs[] // empty | 
+              select(.tests[]?.results[]?.status == "flaky") |
+              "• " + .title + " (Flaky - passed after retry)"
+            ' $RESULTS_FILE 2>/dev/null | head -5)
+            
+            # Convert to single line and add header if we have details
+            if [ ! -z "$flaky_details" ]; then
+              flaky_details=$(echo "$flaky_details" | sed ':a;N;$!ba;s/\n/\\n/g')
+              failed_details="$failed_details\\n\\n**⚠️ Flaky Tests:**\\n$flaky_details"
             fi
           fi
 
