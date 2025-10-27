@@ -24,8 +24,7 @@ test.describe("Whiteboard E2E Tests", () => {
     await inviteInput.fill(INVITEE_CREDENTIALS.email);
     await page.keyboard.press("Enter");
     await page.getByRole("button", { name: /start now/i }).click();
-    await page.refresh();
-    await page.locator('div[role="whiteboard"]').waitFor();
+    await page.getByRole("tab", { name: "Whiteboard" }).waitFor();
     await page.getByRole("tab", { name: "Whiteboard" }).click();
   });
 

@@ -223,7 +223,7 @@ export const test = baseTest.extend({
     const contextOptions = {
       storageState: storageState,
       viewport: { width: 1280, height: 720 },
-      permissions: ['camera', 'microphone']
+      // permissions: ['camera', 'microphone']
     };
 
     // Add CI-specific options for better media handling
