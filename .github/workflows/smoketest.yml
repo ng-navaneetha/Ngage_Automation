@@ -5,11 +5,6 @@ on:
     - cron: "30 3 * * 1-5"   # 9:00 AM IST, Monday–Friday
   workflow_dispatch:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
 jobs:
   smoke:
     runs-on: ubuntu-latest
