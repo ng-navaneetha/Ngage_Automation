@@ -5,6 +5,11 @@ on:
     - cron: "30 3 * * 1-5"   # 9:00 AM IST, Monday–Friday
   workflow_dispatch:
 
+permissions:
+  contents: write     # Required for GitHub Pages deployment
+  pages: write        # Required for GitHub Pages deployment
+  id-token: write     # Required for GitHub Pages deployment
+
 jobs:
   smoke:
     runs-on: ubuntu-latest
@@ -17,6 +22,7 @@ jobs:
       INVITEE_EMAIL: ${{ secrets.INVITEE_EMAIL }}
       INVITEE_PASSWORD: ${{ secrets.INVITEE_PASSWORD }}
       INVITE_EMAIL: ${{ secrets.INVITE_EMAIL }}
+      TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
 
     steps:
       - name: Checkout code
@@ -56,6 +62,13 @@ jobs:
           echo "INVITEE_EMAIL: ${INVITEE_EMAIL:-NOT_SET}"
           echo "INVITEE_PASSWORD: ${INVITEE_PASSWORD:+***SET***}"
           echo "INVITE_EMAIL: ${INVITE_EMAIL:-NOT_SET}"
+          echo "TEAMS_WEBHOOK_URL: ${TEAMS_WEBHOOK_URL:+***SET***}"
+          
+          # Validate required secrets
+          if [ -z "$TEAMS_WEBHOOK_URL" ]; then
+            echo "❌ ERROR: TEAMS_WEBHOOK_URL secret is not set!"
+            exit 1
+          fi
           
           mkdir -p reports
           npx playwright test --grep @smoke --workers=1 --timeout=180000
@@ -98,7 +111,7 @@ jobs:
             echo "Results file not found, sending failure notification"
             curl -H 'Content-Type: application/json' \
               -d "{\"text\": \"🚨 **Ngage Test Results**\n\n❌ Test execution failed - no results available\n🕐 Time: $(date)\n🔗 [View Workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\"}" \
-              ${{ secrets.TEAMS_WEBHOOK_URL }}
+              "$TEAMS_WEBHOOK_URL"
             exit 0
           fi
           
@@ -118,7 +131,7 @@ jobs:
               echo "No actual test results found, sending failure notification"
               curl -H 'Content-Type: application/json' \
                 -d "{\"text\": \"🚨 **Ngage Test Results**\n\n❌ Test execution failed - no test results found\n🕐 Time: $(date)\n🔗 [View Workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\"}" \
-                ${{ secrets.TEAMS_WEBHOOK_URL }}
+                "$TEAMS_WEBHOOK_URL"
               exit 0
             fi
           fi
@@ -219,4 +232,4 @@ jobs:
             -d "{
               \"text\": \"$EMOJI **Ngage Test Results**\\n\\n**$STATUS**\\n\\n📊 **Summary:**\\n• Total: $TOTAL_TESTS tests\\n• Passed: $PASSED_TESTS\\n• Failed: $FAILED_TESTS\\n• Flaky: $FLAKY_TESTS\\n• Skipped: $SKIPPED_TESTS\\n• Duration: ${DURATION_SEC}s (${DURATION_MIN}m)\\n\\n📋 **Test Details:**\\n$summary$failed_details\\n\\n📑 [View Full Report]($latest_url)\\n🔗 [View Workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\\n\\n---\\n👤 **Sent by:** Navaneetha B | 🕐 **Time:** $(TZ='Asia/Kolkata' date +'%a %b %d %Y, %I:%M:%S %p IST')"
             }" \
-            "${{ secrets.TEAMS_WEBHOOK_URL }}"
+            "$TEAMS_WEBHOOK_URL"
