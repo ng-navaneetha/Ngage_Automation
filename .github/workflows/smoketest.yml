@@ -6,13 +6,18 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write     # Required for GitHub Pages deployment
-  pages: write        # Required for GitHub Pages deployment
-  id-token: write     # Required for GitHub Pages deployment
+  contents: read
+  pages: write
+  id-token: write
 
 jobs:
   smoke:
     runs-on: ubuntu-latest
+    
+    # GitHub Pages deployment environment
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     
     # Set environment variables from repository secrets
     env:
@@ -92,14 +97,19 @@ jobs:
           
           echo "REPORT_TS=$ts" >> $GITHUB_ENV
 
-      - name: Deploy Playwright reports to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        if: always()  # Always deploy reports, even if tests failed
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+        
+      - name: Upload artifact to GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        if: always()
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./reports
-          publish_branch: gh-pages
-          keep_files: true  # keep older reports instead of deleting them
+          path: ./reports
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+        if: always()
 
       - name: Parse results and send summary to Teams
         if: always()  # Always send Teams notification, regardless of test outcome
