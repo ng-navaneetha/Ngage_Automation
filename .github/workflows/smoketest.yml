@@ -93,15 +93,14 @@ jobs:
           
           echo "REPORT_TS=$ts" >> $GITHUB_ENV
 
-
-          - name: Deploy Playwright reports to GitHub Pages
-          uses: peaceiris/actions-gh-pages@v3
-          if: always()  # Always deploy reports, even if tests failed
-          with:
-            github_token: ${{ secrets.GITHUB_TOKEN }}
-            publish_dir: ./reports
-            publish_branch: gh-pages
-            keep_files: true  # keep older reports instead of deleting them
+      - name: Deploy Playwright reports to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        if: always()  # Always deploy reports, even if tests failed
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./reports
+          publish_branch: gh-pages
+          keep_files: true  # keep older reports instead of deleting them
 
       - name: Parse results and send summary to Teams
         if: always()  # Always send Teams notification, regardless of test outcome
@@ -223,7 +222,7 @@ jobs:
           latest_url="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/$REPORT_TS/"
 
           # Send comprehensive Teams message
-          if [ -z "${{ secrets.TEAMS_WEBHOOK_URL }}" ]; then
+          if [ -z "$TEAMS_WEBHOOK_URL" ]; then
             echo "Warning: TEAMS_WEBHOOK_URL secret not configured"
             exit 0
           fi
