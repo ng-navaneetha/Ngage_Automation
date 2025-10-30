@@ -8,9 +8,7 @@ on:
 jobs:
   smoke:
     runs-on: ubuntu-latest
-  
-    
-    # Set environment variables from repository secrets
+
     env:
       DASHBOARD_URL: ${{ secrets.DASHBOARD_URL }}
       EMAIL: ${{ secrets.EMAIL }}
@@ -49,7 +47,7 @@ jobs:
 
       - name: Run Playwright smoke tests with HTML + JSON report
         id: tests
-        continue-on-error: true  # Continue workflow even if tests fail
+        continue-on-error: true
         run: |
           echo "🔍 Environment Variables Check:"
           echo "DASHBOARD_URL: ${DASHBOARD_URL:-NOT_SET}"
@@ -59,50 +57,55 @@ jobs:
           echo "INVITEE_PASSWORD: ${INVITEE_PASSWORD:+***SET***}"
           echo "INVITE_EMAIL: ${INVITE_EMAIL:-NOT_SET}"
           echo "TEAMS_WEBHOOK_URL: ${TEAMS_WEBHOOK_URL:+***SET***}"
-          
+
           # Validate required secrets
           if [ -z "$TEAMS_WEBHOOK_URL" ]; then
             echo "❌ ERROR: TEAMS_WEBHOOK_URL secret is not set!"
             exit 1
           fi
           
+          # Ensure base reports folder always exists
           mkdir -p reports
-          npx playwright test --grep @smoke --workers=1 --timeout=180000
-          ts=$(date +'%Y-%m-%d_%H-%M-%S')
           
-          # Move reports and handle missing files gracefully
+          # Run Playwright smoke tests
+          npx playwright test --grep @smoke --workers=1 --timeout=180000 || true
+
+          ts=$(date +'%Y-%m-%d_%H-%M-%S')
+          mkdir -p "reports/$ts"
+
+          # Move HTML report folder
           if [ -d "playwright-report" ]; then
-            mv playwright-report "reports/$ts"
+            mv playwright-report/* "reports/$ts"/
           else
-            mkdir -p "reports/$ts"
-            echo "No HTML report generated" > "reports/$ts/index.html"
+            echo "⚠️ No HTML report generated" > "reports/$ts/index.html"
           fi
           
+          # Move JSON results
           if [ -f "results.json" ]; then
             mv results.json "reports/$ts/results.json"
           else
-            echo "No results.json file found - tests may have failed during execution"
-            # Create a minimal results file for failed execution
+            echo "⚠️ No results.json found - creating placeholder"
             echo '{"stats":{"expected":0,"unexpected":1,"flaky":0,"skipped":0,"duration":0},"suites":[]}' > "reports/$ts/results.json"
           fi
           
           echo "REPORT_TS=$ts" >> $GITHUB_ENV
+          echo "✅ Reports organized under reports/$ts"
 
       - name: Deploy Playwright reports to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
-        if: always()  # Always deploy reports, even if tests failed
+        if: always()
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./reports
           publish_branch: gh-pages
-          keep_files: true  # keep older reports instead of deleting them
+          keep_files: true
 
       - name: Parse results and send summary to Teams
-        if: always()  # Always send Teams notification, regardless of test outcome
+        if: always()
         run: |
           RESULTS_FILE="reports/$REPORT_TS/results.json"
           
-          # Check if results file exists and has actual test data
+          # Check if results file exists
           if [ ! -f "$RESULTS_FILE" ]; then
             echo "Results file not found, sending failure notification"
             curl -H 'Content-Type: application/json' \
@@ -115,24 +118,22 @@ jobs:
           head -30 "$RESULTS_FILE"
           echo "--- End debug info ---"
 
-          # Check if it's a placeholder file (created when tests fail early)
+          # Validate test result data
           TOTAL_FROM_STATS=$(jq -r '.stats.expected + .stats.unexpected + .stats.flaky // 0' $RESULTS_FILE 2>/dev/null || echo "0")
           
           if [ "$TOTAL_FROM_STATS" -eq 0 ]; then
-            echo "Empty or invalid results file, checking for actual test results"
-            # Try the robust method to count actual test results
             ACTUAL_TESTS=$(jq '[.. | objects | select(.status? != null)] | length' $RESULTS_FILE 2>/dev/null || echo "0")
             
             if [ "$ACTUAL_TESTS" -eq 0 ]; then
-              echo "No actual test results found, sending failure notification"
+              echo "No test results found, sending failure notification"
               curl -H 'Content-Type: application/json' \
-                -d "{\"text\": \"🚨 **Ngage Test Results**\n\n❌ Test execution failed - no test results found\n🕐 Time: $(date)\n🔗 [View Workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\"}" \
+                -d "{\"text\": \"🚨 **Ngage Test Results**\n\n❌ Test execution failed - no valid results found\n🕐 Time: $(date)\n🔗 [View Workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\"}" \
                 "$TEAMS_WEBHOOK_URL"
               exit 0
             fi
           fi
 
-          # Use stats-based parsing to match HTML report exactly
+          # Extract stats
           TOTAL_TESTS=$(jq -r '.stats.expected + .stats.unexpected + .stats.flaky + .stats.skipped' $RESULTS_FILE)
           PASSED_TESTS=$(jq -r '.stats.expected // 0' $RESULTS_FILE)
           FAILED_TESTS=$(jq -r '.stats.unexpected // 0' $RESULTS_FILE)
@@ -140,11 +141,10 @@ jobs:
           SKIPPED_TESTS=$(jq -r '.stats.skipped // 0' $RESULTS_FILE)
           DURATION=$(jq -r '.stats.duration // 0' $RESULTS_FILE)
           
-          # Convert duration to seconds and minutes using jq for better reliability  
           DURATION_SEC=$(jq -r "(.stats.duration // 0) / 1000 * 10 | floor / 10" $RESULTS_FILE)
           DURATION_MIN=$(jq -r "(.stats.duration // 0) / 60000 * 10 | floor / 10" $RESULTS_FILE)
 
-          # Determine status and emoji
+          # Determine result status
           if [ "$FAILED_TESTS" -eq 0 ] && [ "$FLAKY_TESTS" -eq 0 ]; then
             STATUS="✅ All Tests Passed"
             EMOJI="🎉"
@@ -156,7 +156,7 @@ jobs:
             EMOJI="⚠️"
           fi
 
-          # Get test summary with status - using correct spec-based approach
+          # Build summary
           summary=$(jq -r '
             .suites[].suites[]?.specs[] // empty | 
             select(.title) |
@@ -170,27 +170,10 @@ jobs:
               "• " + .title + " → ❓ unknown"
             end
           ' $RESULTS_FILE 2>/dev/null | head -15)
-          
-          # Fallback to simple spec listing if complex status parsing fails
-          if [ -z "$summary" ]; then
-            echo "Complex status parsing failed, falling back to simple spec listing"
-            summary=$(jq -r '
-              .suites[].suites[]?.specs[] // empty | 
-              select(.title) |
-              "• " + .title
-            ' $RESULTS_FILE 2>/dev/null | head -15)
-          fi
-          
-          # If we still have no summary, create a basic one
-          if [ -z "$summary" ]; then
-            echo "All spec parsing failed, using fallback summary"
-            summary="• Tests executed - see full report for details"
-          fi
-          
-          # Convert to proper Teams format with line breaks for list items
+
+          [ -z "$summary" ] && summary="• Tests executed - see full report for details"
           summary=$(echo "$summary" | sed ':a;N;$!ba;s/\n/\\n/g')
 
-          # Get failed test details if any - using spec-based approach
           failed_details=""
           if [ "$FAILED_TESTS" -gt 0 ] || [ "$FLAKY_TESTS" -gt 0 ]; then
             failed_details=$(jq -r '
@@ -206,26 +189,15 @@ jobs:
                 "• " + .title + " (unknown issue)"
               end
             ' $RESULTS_FILE 2>/dev/null | head -5)
-            
-            # Convert to single line and add header if we have details
-            if [ ! -z "$failed_details" ]; then
-              failed_details=$(echo "$failed_details" | sed ':a;N;$!ba;s/\n/\\n/g')
-              failed_details="\\n\\n**❌ Failed/Flaky Tests:**\\n$failed_details"
-            fi
+
+            [ ! -z "$failed_details" ] && failed_details=$(echo "$failed_details" | sed ':a;N;$!ba;s/\n/\\n/g')
+            [ ! -z "$failed_details" ] && failed_details="\\n\\n**❌ Failed/Flaky Tests:**\\n$failed_details"
           fi
 
           latest_url="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/$REPORT_TS/"
 
-          # Send comprehensive Teams message
-          if [ -z "$TEAMS_WEBHOOK_URL" ]; then
-            echo "Warning: TEAMS_WEBHOOK_URL secret not configured"
-            exit 0
-          fi
-
-
-          # Send comprehensive Teams message
           curl -H 'Content-Type: application/json' \
             -d "{
-              \"text\": \"$EMOJI **Ngage Test Results**\\n\\n**$STATUS**\\n\\n📊 **Summary:**\\n• Total: $TOTAL_TESTS tests\\n• Passed: $PASSED_TESTS\\n• Failed: $FAILED_TESTS\\n• Flaky: $FLAKY_TESTS\\n• Skipped: $SKIPPED_TESTS\\n• Duration: ${DURATION_SEC}s (${DURATION_MIN}m)\\n\\n📋 **Test Details:**\\n$summary$failed_details\\n\\n📑 [View Full Report]($latest_url)\\n🔗 [View Workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\\n\\n---\\n👤 **Sent by:** Navaneetha B | 🕐 **Time:** $(TZ='Asia/Kolkata' date +'%a %b %d %Y, %I:%M:%S %p IST')"
+              \"text\": \"$EMOJI **Ngage Test Results**\\n\\n**$STATUS**\\n\\n📊 **Summary:**\\n• Total: $TOTAL_TESTS\\n• Passed: $PASSED_TESTS\\n• Failed: $FAILED_TESTS\\n• Flaky: $FLAKY_TESTS\\n• Skipped: $SKIPPED_TESTS\\n• Duration: ${DURATION_SEC}s (${DURATION_MIN}m)\\n\\n📋 **Test Details:**\\n$summary$failed_details\\n\\n📑 [View Full Report]($latest_url)\\n🔗 [View Workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\\n\\n👤 **Sent by:** Navaneetha B | 🕐 **Time:** $(TZ='Asia/Kolkata' date +'%a %b %d %Y, %I:%M:%S %p IST')\"
             }" \
             "$TEAMS_WEBHOOK_URL"

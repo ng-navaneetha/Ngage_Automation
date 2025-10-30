@@ -27,10 +27,11 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined, // Use 1 worker in CI for media tests
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [
-    ['list'], // shows readable output in Actions logs
-    ['html', { outputFolder: 'playwright-report', open: 'never' }],
-    ['json', { outputFile: 'results.json' }]
+    ['list'],
+    ['html', { outputFolder: 'reports/playwright-report', open: 'never' }],
+    ['json', { outputFile: 'reports/results.json' }]
   ],
+  
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
