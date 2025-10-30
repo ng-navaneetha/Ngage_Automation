@@ -1,15 +1,22 @@
-name: Ngage Playwright Test Report
+name: Ngage test Report
 
 on:
   schedule:
     - cron: "30 3 * * 1-5"   # 9:00 AM IST, Monday–Friday
   workflow_dispatch:
-permissions:
-  contents: write     
 
 jobs:
   smoke:
     runs-on: ubuntu-latest
+    
+    # Set environment variables from repository secrets
+    env:
+      DASHBOARD_URL: ${{ secrets.DASHBOARD_URL }}
+      EMAIL: ${{ secrets.EMAIL }}
+      PASSWORD: ${{ secrets.PASSWORD }}
+      INVITEE_EMAIL: ${{ secrets.INVITEE_EMAIL }}
+      INVITEE_PASSWORD: ${{ secrets.INVITEE_PASSWORD }}
+      INVITE_EMAIL: ${{ secrets.INVITE_EMAIL }}
 
     steps:
       - name: Checkout code
@@ -42,29 +49,17 @@ jobs:
         id: tests
         continue-on-error: true  # Continue workflow even if tests fail
         run: |
+          echo "🔍 Environment Variables Check:"
+          echo "DASHBOARD_URL: ${DASHBOARD_URL:-NOT_SET}"
+          echo "EMAIL: ${EMAIL:-NOT_SET}"
+          echo "PASSWORD: ${PASSWORD:+***SET***}"
+          echo "INVITEE_EMAIL: ${INVITEE_EMAIL:-NOT_SET}"
+          echo "INVITEE_PASSWORD: ${INVITEE_PASSWORD:+***SET***}"
+          echo "INVITE_EMAIL: ${INVITE_EMAIL:-NOT_SET}"
+          
           mkdir -p reports
-          
-          echo "Starting Playwright tests with media permission fixes..."
-          echo "CI Environment: $CI"
-          echo "Node version: $(node --version)"
-          echo "Playwright version: $(npx playwright --version)"
-          
-          # Set explicit display for headless mode
-          export DISPLAY=:99.0
-          
-          # Run tests with enhanced media support and JSON reporter
-          npx playwright test --grep @smoke --workers=1 --timeout=180000 
-          
+          npx playwright test --grep @smoke --workers=1 --timeout=180000
           ts=$(date +'%Y-%m-%d_%H-%M-%S')
-          
-          # Debug: Show what files were generated
-          echo "🔍 Checking for generated files..."
-          echo "Current directory contents:"
-          ls -la
-          echo "Test-results directory:"
-          ls -la test-results/ 2>/dev/null || echo "No test-results directory found"
-          echo "Playwright-report directory:"
-          ls -la playwright-report/ 2>/dev/null || echo "No playwright-report directory found"
           
           # Move reports and handle missing files gracefully
           if [ -d "playwright-report" ]; then
@@ -74,18 +69,10 @@ jobs:
             echo "No HTML report generated" > "reports/$ts/index.html"
           fi
           
-          # Try multiple possible locations for results.json
-          if [ -f "test-results/results.json" ]; then
-            echo "✅ Found results.json in test-results/"
-            mv test-results/results.json "reports/$ts/results.json"
-          elif [ -f "results.json" ]; then
-            echo "✅ Found results.json in root directory"
+          if [ -f "results.json" ]; then
             mv results.json "reports/$ts/results.json"
           else
-            echo "❌ No results.json file found in expected locations"
-            echo "Available files in current directory:"
-            find . -name "*.json" -type f 2>/dev/null || echo "No JSON files found"
-            
+            echo "No results.json file found - tests may have failed during execution"
             # Create a minimal results file for failed execution
             echo '{"stats":{"expected":0,"unexpected":1,"flaky":0,"skipped":0,"duration":0},"suites":[]}' > "reports/$ts/results.json"
           fi
@@ -94,15 +81,15 @@ jobs:
 
       - name: Deploy Playwright reports to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
-        if: always()
+        if: always()  # Always deploy reports, even if tests failed
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./reports
           publish_branch: gh-pages
-          keep_files: true
+          keep_files: true  # keep older reports instead of deleting them
 
       - name: Parse results and send summary to Teams
-        if: always()
+        if: always()  # Always send Teams notification, regardless of test outcome
         run: |
           RESULTS_FILE="reports/$REPORT_TS/results.json"
           
@@ -110,26 +97,15 @@ jobs:
           if [ ! -f "$RESULTS_FILE" ]; then
             echo "Results file not found, sending failure notification"
             curl -H 'Content-Type: application/json' \
-              -d "{\"text\": \"🚨 **Ngage Test Results**\n\n❌ Test execution failed - no results available\n🕐 Time: $(TZ='Asia/Kolkata' date +'%a %b %d %Y, %I:%M:%S %p IST')\n🔗 [View Workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\n\n---\n👤 **Sent by:** ng-navaneetha\"}" \
+              -d "{\"text\": \"🚨 **Ngage Test Results**\n\n❌ Test execution failed - no results available\n🕐 Time: $(date)\n🔗 [View Workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\"}" \
               ${{ secrets.TEAMS_WEBHOOK_URL }}
             exit 0
           fi
           
-          echo "✅ Results file found. Contents structure:"
-          # First 30 lines for debugging
-          echo "First 30 lines of results file:"
+          echo "✅ Results file found. First 30 lines:"
           head -30 "$RESULTS_FILE"
           echo "--- End debug info ---"
-          
-          # Check if this is a new Playwright format (has suites) or old format (has stats)
-          HAS_SUITES=$(jq 'has("suites")' $RESULTS_FILE 2>/dev/null || echo "false")
-          HAS_STATS=$(jq 'has("stats")' $RESULTS_FILE 2>/dev/null || echo "false")
-          echo "Has suites: $HAS_SUITES, Has stats: $HAS_STATS"
-          
-          # Debug: Show actual structure
-          echo "JSON structure preview:"
-          jq 'keys' $RESULTS_FILE 2>/dev/null || echo "Failed to parse JSON keys"
-          
+
           # Check if it's a placeholder file (created when tests fail early)
           TOTAL_FROM_STATS=$(jq -r '.stats.expected + .stats.unexpected + .stats.flaky // 0' $RESULTS_FILE 2>/dev/null || echo "0")
           
@@ -141,174 +117,100 @@ jobs:
             if [ "$ACTUAL_TESTS" -eq 0 ]; then
               echo "No actual test results found, sending failure notification"
               curl -H 'Content-Type: application/json' \
-                -d "{\"text\": \"🚨 **Ngage Test Results**\n\n❌ Test execution failed - no test results found\n🕐 Time: $(TZ='Asia/Kolkata' date +'%a %b %d %Y, %I:%M:%S %p IST')\n🔗 [View Workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\n\n---\n👤 **Sent by:** ng-navaneetha\"}" \
+                -d "{\"text\": \"🚨 **Ngage Test Results**\n\n❌ Test execution failed - no test results found\n🕐 Time: $(date)\n🔗 [View Workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\"}" \
                 ${{ secrets.TEAMS_WEBHOOK_URL }}
               exit 0
             fi
           fi
-          
-          # Parse test results with correct nested structure: suites[].suites[].specs[]
-          TOTAL_TESTS=$(jq '
-            [.suites[]?.suites[]?.specs[] // empty] | length
-          ' $RESULTS_FILE 2>/dev/null || echo "0")
-          
-          # Count specs by their overall status (using spec.ok which is most reliable)
-          PASSED_TESTS=$(jq '
-            [.suites[]?.suites[]?.specs[] // empty | 
-             select(.ok == true)] | length
-          ' $RESULTS_FILE 2>/dev/null || echo "0")
-          
-          FAILED_TESTS=$(jq '
-            [.suites[]?.suites[]?.specs[] // empty | 
-             select(.ok == false)] | length
-          ' $RESULTS_FILE 2>/dev/null || echo "0")
-          
-          # For flaky tests, check the actual test results status
-          FLAKY_TESTS=$(jq '
-            [.suites[]?.suites[]?.specs[] // empty | 
-             select(.tests[]?.results[]?.status == "flaky")] | length
-          ' $RESULTS_FILE 2>/dev/null || echo "0")
-          
-          # For skipped tests, check the actual test results status  
-          SKIPPED_TESTS=$(jq '
-            [.suites[]?.suites[]?.specs[] // empty | 
-             select(.tests[]?.results[]?.status == "skipped")] | length
-          ' $RESULTS_FILE 2>/dev/null || echo "0")
-          
-          DURATION=$(jq -r '.stats.duration // 0' $RESULTS_FILE 2>/dev/null || echo "0")
-          
-          # Fallback to stats if spec parsing gives 0 results or fails
-          if [ "$TOTAL_TESTS" -eq 0 ] || [ "$PASSED_TESTS" -eq 0 -a "$FAILED_TESTS" -eq 0 ]; then
-            echo "Falling back to stats-based parsing"
-            TOTAL_TESTS=$(jq -r '(.stats.expected // 0) + (.stats.unexpected // 0) + (.stats.flaky // 0) + (.stats.skipped // 0)' $RESULTS_FILE 2>/dev/null || echo "0")
-            PASSED_TESTS=$(jq -r '.stats.expected // 0' $RESULTS_FILE 2>/dev/null || echo "0")
-            FAILED_TESTS=$(jq -r '.stats.unexpected // 0' $RESULTS_FILE 2>/dev/null || echo "0")
-            FLAKY_TESTS=$(jq -r '.stats.flaky // 0' $RESULTS_FILE 2>/dev/null || echo "0")
-            SKIPPED_TESTS=$(jq -r '.stats.skipped // 0' $RESULTS_FILE 2>/dev/null || echo "0")
-          fi
-          
-          echo "Parsed counts - Total: $TOTAL_TESTS, Passed: $PASSED_TESTS, Failed: $FAILED_TESTS, Flaky: $FLAKY_TESTS, Skipped: $SKIPPED_TESTS, Duration: $DURATION"
-          
-          # Debug output to understand parsing
-          echo "Debug: TOTAL_TESTS=$TOTAL_TESTS, PASSED_TESTS=$PASSED_TESTS, FAILED_TESTS=$FAILED_TESTS"
-          
-          # Ensure we have valid numbers (convert empty/null to 0)
-          TOTAL_TESTS=${TOTAL_TESTS:-0}
-          PASSED_TESTS=${PASSED_TESTS:-0}
-          FAILED_TESTS=${FAILED_TESTS:-0}
-          FLAKY_TESTS=${FLAKY_TESTS:-0}
-          SKIPPED_TESTS=${SKIPPED_TESTS:-0}
-          
-          # Convert duration to seconds
-          DURATION_SEC=$(echo "scale=1; $DURATION / 1000" | bc -l 2>/dev/null || echo "0")
 
-          # Determine status and emoji - be explicit about the logic
-          echo "Status determination: FAILED_TESTS=$FAILED_TESTS, FLAKY_TESTS=$FLAKY_TESTS, PASSED_TESTS=$PASSED_TESTS"
+          # Use stats-based parsing to match HTML report exactly
+          TOTAL_TESTS=$(jq -r '.stats.expected + .stats.unexpected + .stats.flaky + .stats.skipped' $RESULTS_FILE)
+          PASSED_TESTS=$(jq -r '.stats.expected // 0' $RESULTS_FILE)
+          FAILED_TESTS=$(jq -r '.stats.unexpected // 0' $RESULTS_FILE)
+          FLAKY_TESTS=$(jq -r '.stats.flaky // 0' $RESULTS_FILE)
+          SKIPPED_TESTS=$(jq -r '.stats.skipped // 0' $RESULTS_FILE)
+          DURATION=$(jq -r '.stats.duration // 0' $RESULTS_FILE)
           
-          if [ "$FAILED_TESTS" -eq 0 ] && [ "$FLAKY_TESTS" -eq 0 ] && [ "$PASSED_TESTS" -gt 0 ]; then
+          # Convert duration to seconds and minutes using jq for better reliability  
+          DURATION_SEC=$(jq -r "(.stats.duration // 0) / 1000 * 10 | floor / 10" $RESULTS_FILE)
+          DURATION_MIN=$(jq -r "(.stats.duration // 0) / 60000 * 10 | floor / 10" $RESULTS_FILE)
+
+          # Determine status and emoji
+          if [ "$FAILED_TESTS" -eq 0 ] && [ "$FLAKY_TESTS" -eq 0 ]; then
             STATUS="✅ All Tests Passed"
             EMOJI="🎉"
-            echo "Status set to: All Tests Passed"
           elif [ "$FAILED_TESTS" -gt 0 ]; then
             STATUS="❌ Tests Failed"
             EMOJI="🚨"
-            echo "Status set to: Tests Failed"
-          elif [ "$FLAKY_TESTS" -gt 0 ]; then
+          else
             STATUS="⚠️ Flaky Tests Detected"
             EMOJI="⚠️"
-            echo "Status set to: Flaky Tests"
-          else
-            STATUS="❓ Unknown Test Status"
-            EMOJI="❓"
-            echo "Status set to: Unknown (may be parsing issue)"
           fi
 
-          # Get test summary with status - using correct nested structure
+          # Get test summary with status - using correct spec-based approach
           summary=$(jq -r '
-            .suites[]?.suites[]?.specs[] // empty | 
+            .suites[].suites[]?.specs[] // empty | 
             select(.title) |
-            if .ok == true then
+            if .ok == true and (.tests[].results | map(.status) | all(. == "passed")) then
               "• " + .title + " → ✅ passed"
-            else
+            elif .ok == false or (.tests[].results | map(.status) | any(. == "failed")) then
               "• " + .title + " → ❌ failed"  
+            elif .ok == true and (.tests[].results | map(.status) | any(. == "flaky")) then
+              "• " + .title + " → ⚠️ flaky"
+            else
+              "• " + .title + " → ❓ unknown"
             end
           ' $RESULTS_FILE 2>/dev/null | head -15)
           
           # Fallback to simple spec listing if complex status parsing fails
           if [ -z "$summary" ]; then
-            echo "Spec-based summary failed, falling back to simple listing"
+            echo "Complex status parsing failed, falling back to simple spec listing"
             summary=$(jq -r '
-              .suites[]?.suites[]?.specs[] // empty | 
+              .suites[].suites[]?.specs[] // empty | 
               select(.title) |
               "• " + .title
             ' $RESULTS_FILE 2>/dev/null | head -15)
           fi
           
-          # If we still have no summary, use stats-based approach or create fallback
+          # If we still have no summary, create a basic one
           if [ -z "$summary" ]; then
             echo "All spec parsing failed, using fallback summary"
-            if [ "$PASSED_TESTS" -gt 0 ]; then
-              summary="• $PASSED_TESTS tests passed ✅"
-            fi
-            if [ "$FAILED_TESTS" -gt 0 ]; then
-              summary="$summary\\n• $FAILED_TESTS tests failed ❌"
-            fi
-            if [ "$FLAKY_TESTS" -gt 0 ]; then
-              summary="$summary\\n• $FLAKY_TESTS tests flaky ⚠️"
-            fi
-            if [ -z "$summary" ]; then
-              summary="• Tests executed - see full report for details"
-            fi
+            summary="• Tests executed - see full report for details"
           fi
-          
-          echo "Final summary before Teams formatting:"
-          echo "$summary"
           
           # Convert to proper Teams format with line breaks for list items
           summary=$(echo "$summary" | sed ':a;N;$!ba;s/\n/\\n/g')
 
-          # Get failed test details with actual error messages
+          # Get failed test details if any - using spec-based approach
           failed_details=""
-          if [ "$FAILED_TESTS" -gt 0 ]; then
+          if [ "$FAILED_TESTS" -gt 0 ] || [ "$FLAKY_TESTS" -gt 0 ]; then
             failed_details=$(jq -r '
-              .suites[]?.suites[]?.specs[] // empty | 
-              select(.ok == false) |
-              "• " + .title + 
-              if .tests[0]?.results[0]?.error?.message then
-                " (" + (.tests[0].results[0].error.message | split("\n")[0]) + ")"
+              .suites[].suites[]?.specs[] // empty | 
+              select(.title) |
+              select(.ok == false or 
+                     (.tests[].results | map(.status) | any(. == "failed" or . == "flaky"))) |
+              if (.tests[].results | map(.status) | any(. == "failed")) then
+                "• " + .title + " (failed)"
+              elif (.tests[].results | map(.status) | any(. == "flaky")) then
+                "• " + .title + " (flaky)"
               else
-                " (Test failed)"
+                "• " + .title + " (unknown issue)"
               end
             ' $RESULTS_FILE 2>/dev/null | head -5)
             
             # Convert to single line and add header if we have details
             if [ ! -z "$failed_details" ]; then
               failed_details=$(echo "$failed_details" | sed ':a;N;$!ba;s/\n/\\n/g')
-              failed_details="\\n\\n**❌ Failed Tests:**\\n$failed_details"
-            fi
-          fi
-          
-          # Get flaky test details  
-          flaky_details=""
-          if [ "$FLAKY_TESTS" -gt 0 ]; then
-            flaky_details=$(jq -r '
-              .suites[]?.suites[]?.specs[] // empty | 
-              select(.tests[]?.results[]?.status == "flaky") |
-              "• " + .title + " (Flaky - passed after retry)"
-            ' $RESULTS_FILE 2>/dev/null | head -5)
-            
-            # Convert to single line and add header if we have details
-            if [ ! -z "$flaky_details" ]; then
-              flaky_details=$(echo "$flaky_details" | sed ':a;N;$!ba;s/\n/\\n/g')
-              failed_details="$failed_details\\n\\n**⚠️ Flaky Tests:**\\n$flaky_details"
+              failed_details="\\n\\n**❌ Failed/Flaky Tests:**\\n$failed_details"
             fi
           fi
 
           latest_url="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/$REPORT_TS/"
 
-          # Send comprehensive Teams message with sender information
+
+          # Send comprehensive Teams message
           curl -H 'Content-Type: application/json' \
             -d "{
-              \"text\": \"$EMOJI **Ngage Test Results**\\n\\n**$STATUS**\\n\\n📊 **Summary:**\\n• Total: $TOTAL_TESTS tests\\n• Passed: $PASSED_TESTS\\n• Failed: $FAILED_TESTS\\n• Flaky: $FLAKY_TESTS\\n• Duration: ${DURATION_SEC}s\\n\\n📋 **Test Details:**\\n$summary$failed_details\\n\\n📑 [View Full Report]($latest_url)\\n🔗 [View Workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\\n\\n---\\n👤 **Sent by:** ng-navaneetha | 🕐 **Time:** $(TZ='Asia/Kolkata' date +'%a %b %d %Y, %I:%M:%S %p IST')\"
+              \"text\": \"$EMOJI **Ngage Test Results**\\n\\n**$STATUS**\\n\\n📊 **Summary:**\\n• Total: $TOTAL_TESTS tests\\n• Passed: $PASSED_TESTS\\n• Failed: $FAILED_TESTS\\n• Flaky: $FLAKY_TESTS\\n• Skipped: $SKIPPED_TESTS\\n• Duration: ${DURATION_SEC}s (${DURATION_MIN}m)\\n\\n📋 **Test Details:**\\n$summary$failed_details\\n\\n📑 [View Full Report]($latest_url)\\n🔗 [View Workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\\n\\n---\\n👤 **Sent by:** Navaneetha B | 🕐 **Time:** $(TZ='Asia/Kolkata' date +'%a %b %d %Y, %I:%M:%S %p IST')"
             }" \
             ${{ secrets.TEAMS_WEBHOOK_URL }}
