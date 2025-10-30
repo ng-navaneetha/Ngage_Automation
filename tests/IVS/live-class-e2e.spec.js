@@ -24,7 +24,7 @@ const selectors = {
 
 test.describe('Live Class Feature', () => {
   test.beforeEach(async ({ page, context }) => {
-    await page.goto('https://ngage.ngenux.app/dashboard');
+    await page.goto(process.env.DASHBOARD_URL);
     
     // Enhanced media permission setup
     await setupMediaPermissions(context, page.url());
@@ -88,7 +88,7 @@ test.describe('Live Class Feature', () => {
       const participantCount = page.locator(selectors.participantCount);
       if (await participantCount.isVisible()) {
         const count = await participantCount.innerText();
-        expect(Number(count)).toBeGreaterThanOrEqual(1);
+        await expect(Number(count)).toBeGreaterThanOrEqual(1);
       }
     }
   });
