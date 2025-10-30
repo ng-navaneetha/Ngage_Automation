@@ -207,10 +207,16 @@ jobs:
 
           latest_url="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/$REPORT_TS/"
 
+          # Send comprehensive Teams message
+          if [ -z "${{ secrets.TEAMS_WEBHOOK_URL }}" ]; then
+            echo "Warning: TEAMS_WEBHOOK_URL secret not configured"
+            exit 0
+          fi
+
 
           # Send comprehensive Teams message
           curl -H 'Content-Type: application/json' \
             -d "{
               \"text\": \"$EMOJI **Ngage Test Results**\\n\\n**$STATUS**\\n\\n📊 **Summary:**\\n• Total: $TOTAL_TESTS tests\\n• Passed: $PASSED_TESTS\\n• Failed: $FAILED_TESTS\\n• Flaky: $FLAKY_TESTS\\n• Skipped: $SKIPPED_TESTS\\n• Duration: ${DURATION_SEC}s (${DURATION_MIN}m)\\n\\n📋 **Test Details:**\\n$summary$failed_details\\n\\n📑 [View Full Report]($latest_url)\\n🔗 [View Workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\\n\\n---\\n👤 **Sent by:** Navaneetha B | 🕐 **Time:** $(TZ='Asia/Kolkata' date +'%a %b %d %Y, %I:%M:%S %p IST')"
             }" \
-            ${{ secrets.TEAMS_WEBHOOK_URL }}
+            "${{ secrets.TEAMS_WEBHOOK_URL }}"
