@@ -130,6 +130,7 @@ test.describe('Live Poll End-to-End', () => {
     // Assert vote registered
     await expect(inviteePage.locator('text=100%')).toBeVisible();
 
+    await inviteeContext.close();
     // Host sees updated results
     
     await page.click('button:has-text("Poll")');

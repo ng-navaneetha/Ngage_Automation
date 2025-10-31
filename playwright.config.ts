@@ -12,26 +12,21 @@ dotenv.config({ path: path.resolve(__dirname, '.env') });
  * See https://playwright.dev/docs/test-configuration.
  */
 export default defineConfig({
-  timeout: process.env.CI ? 120 * 1000 : 30 * 1000, // 2 minutes in CI, 30s locally
-  expect: {
-    timeout: process.env.CI ? 15000 : 5000 // 15s in CI, 5s locally
-  },
   testDir: './tests',
   /* Run tests in files in parallel */
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
-  /* Retry on CI only - reduced retries */
-  retries: process.env.CI ? 1 : 0, // Only 1 retry instead of 2
-  /* Opt out of parallel tests on CI for media permissions */
-  workers: process.env.CI ? 1 : undefined, // Use 1 worker in CI for media tests
+  /* Retry on CI only */
+  retries: process.env.CI ? 2 : 0,
+  /* Opt out of parallel tests on CI. */
+  workers: process.env.CI ? 1 : undefined,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [
-    ['list'],
-    ['html', { outputFolder: 'reports/playwright-report', open: 'never' }],
-    ['json', { outputFile: 'reports/results.json' }]
+    ['html'],
+    ['json', { outputFile: 'results.json' }],
+    ['allure-playwright'],
   ],
-  
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
@@ -39,68 +34,13 @@ export default defineConfig({
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
-    headless: process.env.CI ? true : false, // Headless in CI, headed locally
-    viewport: { width: 1280, height: 1024 },
-    screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
-    
-    // Configure fake media devices for CI to avoid permission conflicts
-    ...(process.env.CI && {
-      launchOptions: {
-        args: [
-          '--use-fake-ui-for-media-stream',
-          '--use-fake-device-for-media-stream',
-          '--allow-file-access-from-files',
-          '--disable-web-security',
-          '--autoplay-policy=no-user-gesture-required',
-          '--disable-background-timer-throttling',
-          '--disable-backgrounding-occluded-windows',
-          '--disable-renderer-backgrounding',
-          '--disable-features=TranslateUI,VizDisplayCompositor',
-          '--disable-dev-shm-usage',
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-extensions-except',
-          '--disable-plugins',
-          '--disable-gpu',
-          '--force-device-scale-factor=1',
-          // Enhanced media handling for CI
-          '--disable-background-media-suspend',
-          '--disable-renderer-backgrounding',
-          '--disable-background-networking',
-          '--enable-features=VaapiVideoDecoder',
-          '--ignore-gpu-blacklist',
-          '--enable-gpu-rasterization'
-        ]
-      },
-      permissions: ['camera', 'microphone'],
-      ignoreHTTPSErrors: true,
-      // Additional CI-specific context options
-      locale: 'en-US',
-      timezoneId: 'America/New_York'
-    })
   },
 
   /* Configure projects for major browsers */
   projects: [
     {
       name: 'chromium',
-      use: { 
-        ...devices['Desktop Chrome'],
-        // Additional Chrome-specific config for media tests
-        ...(process.env.CI && {
-          launchOptions: {
-            args: [
-              '--use-fake-ui-for-media-stream',
-              '--use-fake-device-for-media-stream',
-              '--allow-file-access-from-files',
-              '--disable-web-security',
-              '--autoplay-policy=no-user-gesture-required',
-              '--disable-features=VizDisplayCompositor'
-            ]
-          }
-        })
-      },
+      use: { ...devices['Desktop Chrome'] },
     },
 
     // {

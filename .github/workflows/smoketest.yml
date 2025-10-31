@@ -71,13 +71,13 @@ jobs:
           npx playwright test --grep @smoke --workers=1 --timeout=180000 || true
 
           ts=$(date +'%Y-%m-%d_%H-%M-%S')
-          mkdir -p "reports/$ts"
 
-          # Move HTML report folder
+          # Move reports and handle missing files gracefully
           if [ -d "playwright-report" ]; then
-            mv playwright-report/* "reports/$ts"/
+            mv playwright-report "reports/$ts"
           else
-            echo "⚠️ No HTML report generated" > "reports/$ts/index.html"
+            mkdir -p "reports/$ts"
+            echo "No HTML report generated" > "reports/$ts/index.html"
           fi
           
           # Move JSON results
